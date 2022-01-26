@@ -24,6 +24,7 @@ import gzip
 
 import numpy as np
 import pandas as pd
+import fsspec
 
 INTERNAL_HEADER=''
 
@@ -39,8 +40,6 @@ def do_external_setup(project_id):
     auth.authenticate_user()
   project_id = project_id
 
-  !pip install fsspec[gcs]
-  import fsspec
 
 
 def format_plate_strings(plate_names):
