@@ -40,6 +40,10 @@ def get_pipeline_options(project, bucket, region):
       './setup.py',
       '--runner',
       'DataflowRunner',
+      # Flag use_runner_v2 avoids a segfault when worker pool starts.
+      # Probably not needed long term.
+      '--experiments',
+      'use_runner_v2',
   ])
   options.view_as(pipeline_options.SetupOptions).save_main_session = True
   options.view_as(pipeline_options.GoogleCloudOptions).project = project
