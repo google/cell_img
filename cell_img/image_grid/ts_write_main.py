@@ -1,4 +1,38 @@
-r"""Write images to tensorstore."""
+r"""Write images to tensorstore.
+
+Sample commands:
+
+Set up a python environment:
+python3 -m venv env
+source env/bin/activate
+
+Install the cell_img package:
+git clone https://github.com/google/cell_img
+pip install -e cell_img
+
+Run the image grid pipeline to create a new tensorstore:
+python cell_img/cell_img/image_grid/ts_write_main.py \
+--tensorstore_path=gs://BUCKET/PATH/TO/OUTPUT/TENSORSTORE' \
+--image_metadata_path=gs://BUCKET/PATH/TO/INPUT/image_metadata.csv \
+--image_path_col=image_path \
+--create_new_tensorstore=True \
+--axes=Y,X,stain \
+--x_axis_wrap=plate,well_col,site_col \
+--y_axis_wrap=batch,well_row,site_row
+
+Expand the existing tensorstore and write a new batch and plate:
+python cell_img/cell_img/image_grid/ts_write_main.py \
+--tensorstore_path=gs://BUCKET/PATH/TO/OUTPUT/TENSORSTORE' \
+--image_metadata_path=gs://BUCKET/PATH/TO/INPUT/image_metadata.csv \
+--image_path_col=image_path \
+--allow_expansion_of_tensorstore=True
+
+Add these flags to run the pipeline on cloud dataflow:
+--project=PROJECT \
+--bucket=STAGING_BUCKET \
+--region=REGION \
+--run_on_cloud=True
+"""
 
 import copy
 from typing import Sequence
@@ -37,7 +71,7 @@ def get_pipeline_options(project, bucket, region):
   """Returns cloud dataflow pipeline options."""
   options = pipeline_options.PipelineOptions(flags=[
       '--setup_file',
-      './setup.py',
+      'cell_img/setup.py',
       '--runner',
       'DataflowRunner',
       # Flag use_runner_v2 avoids a segfault when worker pool starts.
