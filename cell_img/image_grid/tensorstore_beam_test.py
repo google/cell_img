@@ -172,7 +172,7 @@ class RetryableExecutorTest(absltest.TestCase):
     self.assertEqual(1234, my_future.result())
 
   def test_succeeds_when_ten_attempts_and_nine_timeouts(self):
-    executor = tensorstore_beam.RetryableExecutor(
+    executor = tensorstore_beam.RetryableExecutor(  # pytype: disable=wrong-arg-types  # py39-upgrade
         max_attempts=10, exceptions_to_catch=asyncio.CancelledError)
     num_timeouts = 9
     exceptions_to_raise = [asyncio.CancelledError] * num_timeouts
@@ -181,7 +181,7 @@ class RetryableExecutorTest(absltest.TestCase):
     self.assertEqual(1234, my_future.result())
 
   def test_raises_when_ten_attempts_and_ten_timeouts(self):
-    executor = tensorstore_beam.RetryableExecutor(
+    executor = tensorstore_beam.RetryableExecutor(  # pytype: disable=wrong-arg-types  # py39-upgrade
         max_attempts=10, exceptions_to_catch=asyncio.CancelledError)
     num_timeouts = 10
     exceptions_to_raise = [asyncio.CancelledError] * num_timeouts
@@ -191,7 +191,7 @@ class RetryableExecutorTest(absltest.TestCase):
       my_future.result()
 
   def test_multiple_error_types(self):
-    executor = tensorstore_beam.RetryableExecutor(
+    executor = tensorstore_beam.RetryableExecutor(  # pytype: disable=wrong-arg-types  # py39-upgrade
         max_attempts=3,
         exceptions_to_catch=(asyncio.CancelledError, KeyError),
         max_workers=1)
@@ -201,7 +201,7 @@ class RetryableExecutorTest(absltest.TestCase):
     self.assertEqual(1234, my_future.result())
 
   def test_multiple_error_types_raises_on_uncaught_error(self):
-    executor = tensorstore_beam.RetryableExecutor(
+    executor = tensorstore_beam.RetryableExecutor(  # pytype: disable=wrong-arg-types  # py39-upgrade
         max_attempts=3,
         exceptions_to_catch=asyncio.CancelledError,
         max_workers=1)

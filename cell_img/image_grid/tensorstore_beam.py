@@ -81,7 +81,7 @@ class _WriteTensorStoreDoFn(beam.DoFn):
         write=True,
         open=True,
         context=_tensorstore_context).result()
-    self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,
+    self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,  # pytype: disable=wrong-arg-types  # py39-upgrade
                                        _MAX_WORKERS)
     beam.metrics.Metrics.counter(_NAMESPACE, 'write_setup').inc()
 
@@ -148,7 +148,7 @@ class _ReadTensorStoreDoFn(beam.DoFn):
         write=False,
         create=False,
         context=_tensorstore_context).result()
-    self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,
+    self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,  # pytype: disable=wrong-arg-types  # py39-upgrade
                                        _MAX_WORKERS)
     beam.metrics.Metrics.counter(_NAMESPACE, 'read_setup').inc()
 
