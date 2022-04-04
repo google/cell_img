@@ -33,6 +33,8 @@ def do_external_setup(project_id):
   Args:
     project_id: GCP project id associated with the colab.
   """
+  if not os.path.exists('/var/colab/hostname'):
+    return
   with open('/var/colab/hostname') as f:
     vm_name = f.read()
   if vm_name.startswith('colab-'):

@@ -383,6 +383,55 @@ class TensorstoreIndex():
         to_return.append(slice(start_coord, (start_coord + unit_size)))
     return tuple(to_return)
 
+  def get_square_patch_slice(
+      self, labels, offsets: Dict[str, int], patch_size: int
+      ) -> Tuple[Union[int, slice]]:
+    """Returns a slice specifying the location of a patch image in tensorstore.
+
+    Note that this ignores site image boundaries. The labels parameter returns
+    the corner of the block and the offsets are added to those dimensions.
+
+    Sample usage:
+    # Get the patch slice to specify the image coords in tensorstore.
+    # In this case, a 128x128 patch that is 500,300 away from the corner
+    # of the position indicated by the metadata labels.
+    image_slice = get_square_patch_slice(
+      single_image_metadata_dict, {'X':500, 'Y':300}, 128)
+    # Write the image array to tensorstore.
+    tensorstore_dataset[image_slice] = image_array_to_store
+    # Retrieve the image array from tensorstore.
+    image_array_retrieved = tensorstore_dataset[image_slice]
+
+    Args:
+      labels: A dict of image metadata label names to values for the image.
+      offsets: A dict where the key is the axis name and the value is the
+        size of the offset in that axis.
+      patch_size: Integer length along one side of the square. For patch_size
+          of N, the returned patch will be of size N by N, centered on the
+          point found by the labels + offsets.
+    Returns:
+      A tuple of slices and ints suitable for reading/writing the image from
+      tensorstore.
+    """
+    start_coords = self.get_coords_dict(labels)
+    half_patch_size = patch_size // 2
+    to_return = []
+    for axis_name in self.axes:
+      start_coord = start_coords[axis_name]
+      unit_size = self.unit_sizes.get(axis_name, 1)
+      # unit size of 1 indicates layers that should not be sliced in the patch.
+      if unit_size == 1:
+        to_return.append(int(start_coord))
+      else:
+        if axis_name in offsets:
+          center_coord = start_coord + offsets[axis_name]
+        else:
+          center_coord = start_coord
+        to_return.append(
+            slice((center_coord - half_patch_size),
+                  (center_coord + half_patch_size)))
+    return tuple(to_return)
+
 
 def index_from_tensorstore_metadata(
     tensorstore_metadata: Dict[str, Any]) -> TensorstoreIndex:
