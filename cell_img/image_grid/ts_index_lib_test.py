@@ -373,6 +373,99 @@ class TensorstoreIndexTest(absltest.TestCase):
     np.testing.assert_equal(coords_dict['Y'], [0, 480])
     np.testing.assert_equal(coords_dict['stain'], [0, 1])
 
+  def test_get_whole_image_slice(self):
+    valid_query = {
+        'batch': 'batch0',
+        'plate': 'plate0',
+        'well_row': 'A',
+        'well_col': '1',
+        'site_row': 'site_row0',
+        'site_col': 'site_col0',
+        'stain': 'stain0',
+    }
+    whole_img = self.lookup.get_whole_image_slice(valid_query)
+    np.testing.assert_equal(whole_img[0], slice(0, 640, None))
+    np.testing.assert_equal(whole_img[1], slice(0, 480, None))
+    np.testing.assert_equal(whole_img[2], 0)
+
+  def test_get_whole_image_slice_fails_on_multiple_labels(self):
+    invalid_query = {
+        'batch': ['batch0', 'batch0'],
+        'plate': ['plate0', 'plate0'],
+        'well_row': ['A', 'A'],
+        'well_col': ['1', '1'],
+        'site_row': ['site_row0', 'site_row1'],
+        'site_col': ['site_col0', 'site_col1'],
+        'stain': ['stain0', 'stain1'],
+    }
+    with self.assertRaises(TypeError):
+      _ = self.lookup.get_whole_image_slice(invalid_query)
+
+  def test_get_square_patch_slice(self):
+    valid_query = {
+        'batch': 'batch0',
+        'plate': 'plate0',
+        'well_row': 'A',
+        'well_col': '1',
+        'site_row': 'site_row0',
+        'site_col': 'site_col0',
+        'stain': 'stain0',
+    }
+    offsets = {'X': 16, 'Y': 16}
+    patch_size = 32
+    slice_img = self.lookup.get_square_patch_slice(
+        valid_query, offsets, patch_size)
+    np.testing.assert_equal(slice_img[0], slice(0, 32, None))
+    np.testing.assert_equal(slice_img[1], slice(0, 32, None))
+    np.testing.assert_equal(slice_img[2], 0)
+
+  def test_get_square_patch_slice_fails_offset_not_used(self):
+    valid_query = {
+        'batch': 'batch0',
+        'plate': 'plate0',
+        'well_row': 'A',
+        'well_col': '1',
+        'site_row': 'site_row0',
+        'site_col': 'site_col0',
+        'stain': 'stain0',
+    }
+    # There is no 'Z' axis
+    offsets = {'X': 16, 'Y': 16, 'Z': 16}
+    patch_size = 32
+    with self.assertRaises(ValueError):
+      self.lookup.get_square_patch_slice(valid_query, offsets, patch_size)
+
+  def test_get_square_patch_slice_fails_across_whole_images(self):
+    valid_query = {
+        'batch': 'batch0',
+        'plate': 'plate0',
+        'well_row': 'A',
+        'well_col': '1',
+        'site_row': 'site_row0',
+        'site_col': 'site_col0',
+        'stain': 'stain0',
+    }
+    # Make a patch before the first site
+    offsets = {'X': 0, 'Y': 0}
+    patch_size = 32
+    with self.assertRaises(ValueError):
+      self.lookup.get_square_patch_slice(valid_query, offsets, patch_size)
+    # Make a patch across the first and second site
+    offsets = {'X': 630, 'Y': 0}
+    patch_size = 32
+    with self.assertRaises(ValueError):
+      self.lookup.get_square_patch_slice(valid_query, offsets, patch_size)
+    # Make a patch across the first and second site in the Y direction
+    offsets = {'X': 0, 'Y': 450}
+    patch_size = 32
+    with self.assertRaises(ValueError):
+      self.lookup.get_square_patch_slice(valid_query, offsets, patch_size)
+    # No exception if we turn off the require_within_single_image flag.
+    offsets = {'X': 630, 'Y': 0}
+    patch_size = 32
+    self.lookup.get_square_patch_slice(valid_query, offsets, patch_size,
+                                       require_within_single_image=False)
+
 
 if __name__ == '__main__':
   absltest.main()
