@@ -13,7 +13,7 @@ setuptools.setup(
     install_requires=[
         'absl-py>=0.11.0',
         'apache-beam[gcp]>=2.34.0',
-        'fsspec',
+        'fsspec[gcs]',
         'numpy>=1.19.5',
         'Pillow>=8.1.0',
         'pandas>=1.2.1',
