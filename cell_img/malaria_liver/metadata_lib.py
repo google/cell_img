@@ -33,7 +33,7 @@ METADATA_COLS = ['batch', 'plate', 'well', 'site']
 class MetadataIndex(object):
   """Convenience wrapper on the TensorstoreIndex for access."""
 
-  def __init__(self, tensorstore_root_path, channel_list):
+  def __init__(self, tensorstore_root_path, channel_list, metadata_root_path):
     """Constructor.
 
     Args:
@@ -48,6 +48,7 @@ class MetadataIndex(object):
     self.ts_root_path = tensorstore_root_path
     self.ts_index = self._get_ts_index(tensorstore_root_path)
     self.channel_list = channel_list
+    self.metadata_root_path = metadata_root_path
 
   def _get_ts_index(
       self, tensorstore_root_path: str) -> ts_index_lib.TensorstoreIndex:
