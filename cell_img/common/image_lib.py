@@ -168,6 +168,10 @@ def create_contact_sheet(image_list: List[np.ndarray],
 def normalize_image(img, lowest_max=0, norm_max=0.75):
   """Rescale min and max image values to 0.0 and norm_max, respectively.
 
+  If the input img contains multiple colors (e.g. stains), these colors are
+  all normalized together, so the relative brightness will be maintained.
+  To normalize each color separately, use normalize_per_color_image.
+
   Args:
     img: Numpy array of the image pixel intensities
     lowest_max: If the brightest pixel is below this value, use this value
@@ -182,3 +186,34 @@ def normalize_image(img, lowest_max=0, norm_max=0.75):
   min_value = img.min()
   max_value = max(lowest_max, img.max())
   return ((img - min_value) / (max_value - min_value)) * norm_max
+
+
+def normalize_per_color_image(img, lowest_max=0, norm_max=0.75):
+  """Rescale min and max image values to 0.0 and norm_max, respectively.
+
+  If the input img contains multiple colors (e.g. stains), these colors are
+  all normalized separately, so a dim stain will look brighter relative to
+  other stains. To maintain the relative brightness of the colors, use
+  normalize_image.
+
+  Args:
+    img: Numpy array of the image pixel intensities
+    lowest_max: If the brightest pixel is below this value, use this value
+      instead. This prevents too much noise in very dim images.
+    norm_max: The value for the max. This would typically be 1.0 to use the full
+      dynamic range, but some tools provide a way to brighten images further,
+      and they look blown out if the max goes all the way up already.
+
+  Returns:
+    The normalized image.
+  """
+
+  # grab each array and norm separately
+  normed_slices = []
+  for i in range(img.shape[-1]):
+    normed_slices.append(normalize_image(img[:, :, i], lowest_max, norm_max))
+
+  # restack and return
+  return np.stack(normed_slices, axis=-1)
+
+

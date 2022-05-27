@@ -8,7 +8,7 @@ import re
 from typing import Any, Dict, Generator, List, Tuple, Union
 
 import apache_beam as beam
-from cell_img.image_grid import io_lib
+from cell_img.common import io_lib
 from cell_img.image_grid import ts_write_lib
 import numpy as np
 import tensorstore as ts
