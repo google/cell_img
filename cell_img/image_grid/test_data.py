@@ -3,7 +3,7 @@
 import itertools
 import os
 
-from cell_img.image_grid import io_lib
+from cell_img.common import io_lib
 import numpy as np
 import pandas as pd
 
