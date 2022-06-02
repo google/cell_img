@@ -2,8 +2,8 @@
 
 from absl import logging
 import apache_beam as beam
+from cell_img.common import io_lib
 from cell_img.image_grid import downsample_lib
-from cell_img.image_grid import io_lib
 from cell_img.image_grid import tensorstore_beam
 from cell_img.image_grid import ts_index_lib
 from cell_img.image_grid import ts_metadata_lib

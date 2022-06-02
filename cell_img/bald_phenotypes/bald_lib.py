@@ -4,19 +4,29 @@ References: https://arxiv.org/abs/1703.02910, https://arxiv.org/abs/1112.5745
 """
 
 import os
+from typing import Optional, Dict, List, Tuple, Text, Any
 
 from absl import logging
 import fsspec
+import matplotlib.pyplot as plt
+import networkx as nx
+from networkx.algorithms import components
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import sklearn
 from sklearn import model_selection
 from sklearn.preprocessing import OneHotEncoder
 import tensorflow as tf
 
+sns.set_style('ticks')
+sns.set_style('whitegrid')
+
 VERY_SMALL_NUMBER = 0.00001
 
 
-def _make_label_dict(emb_df, label_category='compound'):
+def _make_label_dict(emb_df: pd.DataFrame,
+                     label_category: Optional[Text] = 'compound') -> Dict:
   label_dict = {}
   unique_labels = sorted(emb_df.index.get_level_values(label_category).unique())
   for i, label in enumerate(unique_labels):
@@ -24,13 +34,15 @@ def _make_label_dict(emb_df, label_category='compound'):
   return label_dict
 
 
-def _label_smoothing(input_vectors, alpha, num_categories):
+def _label_smoothing(input_vectors: np.ndarray, alpha: float,
+                     num_categories: int) -> np.ndarray:
   return (1.0 - alpha) * input_vectors + (alpha / num_categories)
 
 
-def _normalize_wrt_label(emb_df,
-                         label_category='compound',
-                         control_label='DMSO'):
+def _normalize_wrt_label(
+    emb_df: pd.DataFrame,
+    label_category: Optional[Text] = 'compound',
+    control_label: Optional[Text] = 'DMSO') -> pd.DataFrame:
   """Normalizes embeddings with respect to the control value for the category.
 
   Args:
@@ -51,7 +63,8 @@ def _normalize_wrt_label(emb_df,
       data=output_features, index=emb_df.index, columns=emb_df.columns)
 
 
-def sample_wells(emb_df, label_category, n_sampled):
+def sample_wells(emb_df: pd.DataFrame, label_category: str,
+                 n_sampled: int) -> pd.DataFrame:
   """Samples at most n_sampled wells from each category.
 
   This function is used directly from the example colab.
@@ -83,10 +96,11 @@ def sample_wells(emb_df, label_category, n_sampled):
   return pd.concat(df_sampled)
 
 
-def _make_balanced_model_input_data(emb_df_normalized,
-                                    cv_folds,
-                                    label_category='compound',
-                                    random_state=123123123):
+def _make_balanced_model_input_data(
+    emb_df_normalized: pd.DataFrame,
+    cv_folds: int,
+    label_category: Optional[Text] = 'compound',
+    random_state: Optional[int] = 123123123) -> Tuple[List, List]:
   """Makes stratified k-fold cross validation folds for training.
 
   This code splits the input embeddings into cross validation folds of sizes
@@ -160,17 +174,19 @@ def _make_balanced_model_input_data(emb_df_normalized,
   return cv_data, split_idx
 
 
-def _make_train_model(train_features,
-                      train_labels,
-                      val_features,
-                      val_labels,
-                      n_dimensions,
-                      n_labels,
-                      n1=64,
-                      n2=32,
-                      p_dropout=0.5,
-                      epochs=4000,
-                      **kwargs):
+def _make_train_model(
+    train_features: np.ndarray,
+    train_labels: np.ndarray,
+    val_features: np.ndarray,
+    val_labels: np.ndarray,
+    n_dimensions: int,
+    n_labels: int,
+    n1: Optional[int] = 64,
+    n2: Optional[int] = 32,
+    p_dropout: Optional[float] = 0.5,
+    epochs: Optional[int] = 4000,
+    kwargs: Optional[Dict[Text, Any]] = None
+) -> Tuple[tf.keras.Model, tf.keras.callbacks.History]:
   """Makes and trains a classifier for predicting labels.
 
   Args:
@@ -184,7 +200,7 @@ def _make_train_model(train_features,
     n2: number of nodes for second dense layer
     p_dropout: dropout probability for last layer
     epochs: number of training epochs
-    **kwargs: parameters used for early stopping. Early stopping is only used if
+    kwargs: parameters used for early stopping. Early stopping is only used if
       extra arguments are provided
 
   Returns:
@@ -224,15 +240,18 @@ def _make_train_model(train_features,
   return model_logits, history
 
 
-def _train_models_on_cv_folds(cv_data,
-                              n_dimensions,
-                              n_labels,
-                              use_label_smoothing=True,
-                              n1=64,
-                              n2=32,
-                              p_dropout=0.5,
-                              epochs=4000,
-                              **kwargs):
+def _train_models_on_cv_folds(
+    cv_data: List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+                        np.ndarray, np.ndarray]],
+    n_dimensions: int,
+    n_labels: int,
+    use_label_smoothing: Optional[bool] = True,
+    n1: Optional[int] = 64,
+    n2: Optional[int] = 32,
+    p_dropout: Optional[float] = 0.5,
+    epochs: Optional[int] = 4000,
+    kwargs: Optional[Dict[Text, Any]] = None
+) -> Tuple[List[tf.keras.Model], List[tf.keras.callbacks.History]]:
   """Trains models on different cross validation folds.
 
   Args:
@@ -246,7 +265,7 @@ def _train_models_on_cv_folds(cv_data,
     n2: number of nodes for second dense layer
     p_dropout: dropout probability for last layer
     epochs: number of training epochs
-    **kwargs: parameters used for early stopping. Early stopping is only used if
+    kwargs: parameters used for early stopping. Early stopping is only used if
       extra arguments are provided
 
   Returns:
@@ -271,13 +290,15 @@ def _train_models_on_cv_folds(cv_data,
         n2=n2,
         p_dropout=p_dropout,
         epochs=epochs,
-        **kwargs)
+        kwargs=kwargs)
     trained_models.append(model_logits)
     model_history.append(history)
   return trained_models, model_history
 
 
-def _compute_predictions_on_test_set(test_cv_folds, model_ensemble, n_samples):
+def _compute_predictions_on_test_set(test_cv_folds: List[np.array],
+                                     model_ensemble: List[tf.keras.Model],
+                                     n_samples: int) -> np.ndarray:
   """Computes prediction on cross validation folds held out for testing.
 
   For model training on cross validation folds, we held out a test set for each
@@ -302,7 +323,9 @@ def _compute_predictions_on_test_set(test_cv_folds, model_ensemble, n_samples):
   return np.concatenate(new_predictions)
 
 
-def _compute_predictions(input_features, model_ensemble, n_samples):
+def _compute_predictions(input_features: np.ndarray,
+                         model_ensemble: List[tf.keras.Model],
+                         n_samples: int) -> np.ndarray:
   """Computes prediction on a given dataframe of embeddings.
 
   Args:
@@ -326,17 +349,19 @@ def _compute_predictions(input_features, model_ensemble, n_samples):
   return new_predictions_stacked
 
 
-def _entropy_of_average(preds):
+def _entropy_of_average(preds: np.ndarray) -> np.ndarray:
   avg_pred = np.mean(preds, axis=-1)
   return -1 * np.sum(avg_pred * np.log(avg_pred + VERY_SMALL_NUMBER), axis=1)
 
 
-def _average_entropy(preds):
+def _average_entropy(preds: np.ndarray) -> np.ndarray:
   all_preds = -1 * np.sum(preds * np.log(preds + VERY_SMALL_NUMBER), axis=1)
   return np.mean(all_preds, axis=-1)
 
 
-def _compute_argmax_entropy_bald(stacked_predictions):
+def _compute_argmax_entropy_bald(
+    stacked_predictions: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
   # This calculates the BALD objective from https://arxiv.org/pdf/1112.5745.pdf
   argmax = np.argmax(np.mean(stacked_predictions, axis=-1), axis=1)
   entropy = _entropy_of_average(stacked_predictions)
@@ -344,10 +369,10 @@ def _compute_argmax_entropy_bald(stacked_predictions):
   return argmax, entropy, bald_vals
 
 
-def make_stats_df_on_data(emb_df,
-                          stacked_predictions,
-                          label_dict,
-                          split_idx=None):
+def make_stats_df_on_data(emb_df: pd.DataFrame,
+                          stacked_predictions: np.ndarray,
+                          label_dict: Dict[Text, int],
+                          split_idx: Optional[Any] = None) -> pd.DataFrame:
   """Makes a dataframe of prediction statistics on cross validation test sets.
 
   Args:
@@ -394,21 +419,21 @@ def make_stats_df_on_data(emb_df,
 
 
 def compute_bald_with_cv(
-    input_data_df,
-    output_name='',
-    label_category='compound',
-    control_label='DMSO',
-    cv_folds=6,
-    use_label_smoothing=True,
-    n1=64,
-    n2=32,
-    p_dropout=0.5,
-    epochs=4000,
-    n_ensemble_models=100,
-    result_copy_path='',
-    return_models=False,
-    normalize_input_data=True,
-    **kwargs):
+    input_data_df: pd.DataFrame,
+    output_name: Optional[Text] = '',
+    label_category: Optional[Text] = 'compound',
+    control_label: Optional[Text] = 'DMSO',
+    cv_folds: Optional[int] = 6,
+    use_label_smoothing: Optional[bool] = True,
+    n1: Optional[int] = 64,
+    n2: Optional[int] = 32,
+    p_dropout: Optional[float] = 0.5,
+    epochs: Optional[int] = 4000,
+    n_ensemble_models: Optional[int] = 100,
+    result_copy_path: Optional[Text] = '',
+    return_models: Optional[bool] = False,
+    normalize_input_data: Optional[bool] = True,
+    kwargs: Optional[Dict[str, Any]] = None) -> Tuple[pd.DataFrame, List]:
   """Trains an ensemble of models on embeddings and compute BALD objective.
 
   This function takes in a dataframe of embeddings, trains an ensemble of models
@@ -418,8 +443,8 @@ def compute_bald_with_cv(
 
   Args:
     input_data_df: Input dataframe with embeddings and metadata
-    output_name: string, name for saving output data.
-      If empty, output data is not saved
+    output_name: string, name for saving output data. If empty, output data is
+      not saved
     label_category: str, Quantity to use as labels, e.g. compound, dose
     control_label: str, Control value for label_category, e.g. DMSO for compound
     cv_folds: int, number of k-fold cross validation folds
@@ -434,7 +459,7 @@ def compute_bald_with_cv(
     return_models: return the trained model ensemble as the second argument
     normalize_input_data: normalize embeddings with respect to embeddings for
       control values
-    **kwargs: parameters used for early stopping. Early stopping is only used if
+    kwargs: parameters used for early stopping. Early stopping is only used if
       extra arguments are provided
 
   Returns:
@@ -469,7 +494,7 @@ def compute_bald_with_cv(
       n2=n2,
       p_dropout=p_dropout,
       epochs=epochs,
-      **kwargs)
+      kwargs=kwargs)
 
   # make predictions on test sets for each cv fold
   n_samples_per_fold = n_ensemble_models // len(trained_models)
@@ -489,10 +514,136 @@ def compute_bald_with_cv(
 
   # Copy results to cloud
   if output_name and result_copy_path:
-    with fsspec.open(os.path.join(result_copy_path, output_name + '.csv'), 'w') as f:
+    with fsspec.open(os.path.join(result_copy_path, output_name + '.csv'),
+                     'w') as f:
       stats_df.to_csv(f)
 
   if return_models:
     return stats_df, trained_models
   else:
     return stats_df, []
+
+
+def plot_bald_probability(
+    stats_df: pd.DataFrame,
+    alpha: Optional[float] = 1,
+    label_category: Optional[Text] = 'compound') -> plt.figure:
+  """Plots BALD objective against label probabilities.
+
+  Args:
+    stats_df: Input dataframe with model predictions, expected to have columns:
+      "label" which has the assigned label, which is expected to be one of the
+      strings found in the label_category values. "label_prob" which has the
+      model probabilities for the labels. "bald" which is the value of the BALD
+      objective from the model.
+    alpha: alpha for the scatterplot output
+    label_category: str, Quantity to use as labels, e.g. compound, dose
+
+  Returns:
+    matplotlib figure plotting label probabilities and BALD objective
+    for each category. Pink dots indicate the data points where the
+    BALD classifier matches the true category.
+  """
+  unique_labels = sorted(stats_df.reset_index()[label_category].unique())
+
+  nrows, ncols = np.ceil(len(unique_labels) / 4).astype(int), 4
+  fig, ax_s = plt.subplots(nrows, ncols, figsize=(2 * ncols, 2 * nrows))
+  flattened_ax = [item for sublist in ax_s for item in sublist]
+
+  i = 0
+  for label in unique_labels:
+    ax = flattened_ax[i]
+    i += 1
+
+    examples_in_category = stats_df.query('%s=="%s"' % (label_category, label))
+    true_positives = examples_in_category.query('label=="%s"' % label)
+    ax.scatter(
+        examples_in_category.label_prob,
+        examples_in_category.bald,
+        s=15,
+        alpha=alpha,
+        color='gray')
+    ax.scatter(
+        true_positives.label_prob,
+        true_positives.bald,
+        s=15,
+        alpha=alpha,
+        color='magenta')
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+    ax.set_title(label)
+  fig.tight_layout(pad=0)
+  return fig
+
+
+def plot_confusion_matrix(
+    stats_df: pd.DataFrame,
+    label_category: Optional[Text] = 'compound',
+    control_category: Optional[Text] = 'DMSO',
+    figsize: Optional[Tuple] = (7, 6)
+) -> Tuple[np.ndarray, List[Text]]:
+  """Plots confusion matrices for label categories.
+
+  Args:
+    stats_df: Input dataframe with model predictions, expected to have columns:
+      "label" which has the assigned label, which is expected to be one of the
+      strings found in the label_category values, and f"label_category" which is
+      the quantity used as labels, e.g. compound, dose.
+    label_category: str, Quantity to use as labels, e.g. compound, dose. This
+      should be one of the columns of stats_df
+    control_category: value for the control category, e.g. "DMSO" for compound.
+      If not empty, this category is dropped from comuting the control matrix.
+    figsize: tuple, output figure size
+
+  Returns:
+    np.array of the confusion matrix and corresponding labels
+  """
+  if control_category:
+    stats_df = stats_df.query('%s!="%s"' % (label_category, control_category))
+  labels = sorted(stats_df[label_category].unique())
+  confusion_mat = sklearn.metrics.confusion_matrix(
+      stats_df[label_category].values, stats_df.label.values, labels=labels)
+  plt.figure(figsize=figsize)
+  sns.heatmap(confusion_mat, xticklabels=labels, yticklabels=labels, cmap='hot')
+  plt.xlabel('Predicted label')
+  plt.ylabel('True label')
+  plt.tight_layout()
+  plt.show()
+
+  return confusion_mat, labels
+
+
+def get_categories_with_similar_phenotypes(
+    confusion_mat: np.ndarray,
+    labels: List[Text],
+    similarity_cutoff: Optional[float] = 0.15,
+    min_samples: Optional[int] = 3) -> List[List[Text]]:
+  """Finds groups of categories the BALD classifier misclassifies as other members of the group.
+
+  Args:
+    confusion_mat: np.array, confusion matrix from BALD classifier
+    labels: list of labels corresponding to the entries of the confusion matrix
+    similarity_cutoff: float, threshold used for grouping labels together. If
+      the (number of entries in label A predicted as label B)/(total number of
+      entries in label A) < similarity_cutoff, labels A and B are not grouped
+      together.
+    min_samples: int, confusion matrix entries less than min_samples are dropped
+
+  Returns:
+    list of lists with each sublist containing similar labels
+  """
+  cmat_frac = confusion_mat / np.sum(confusion_mat, axis=1)
+  cmat_frac = np.multiply(cmat_frac, confusion_mat > min_samples)
+  cmat_frac = (cmat_frac > similarity_cutoff).astype(int)
+  # treat the confusion matrix as a graph with labels as nodes,
+  # and find connected components
+  connected_labels = np.vstack(np.where(cmat_frac)).T.tolist()
+  connected_labels = [
+      item for item in connected_labels if item[::-1] in connected_labels
+  ]
+  label_graph = nx.Graph()
+  for item in connected_labels:
+    label_graph.add_edge(*item)
+  return [[labels[i]
+           for i in s]
+          for s in components.connected_components(label_graph)]

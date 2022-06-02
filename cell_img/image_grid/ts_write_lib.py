@@ -4,7 +4,7 @@ import copy
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from cell_img.image_grid import io_lib
+from cell_img.common import io_lib
 from cell_img.image_grid import ts_metadata_lib
 import pandas as pd
 import tensorstore as ts
