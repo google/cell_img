@@ -4,7 +4,7 @@ import codecs
 import json
 from typing import IO, Union
 
-import apache_beam as beam
+import fsspec
 import numpy as np
 import pandas as pd
 from PIL import Image as PilImage
@@ -45,26 +45,4 @@ def write_json_file(to_encode, output_path: str) -> None:
 
 
 def _open(path, mode) -> _IO:
-  """Opens a file."""
-  if mode == 'rb':
-    return _open_binary(path, 'r')
-  elif mode == 'wb':
-    return _open_binary(path, 'w')
-  elif mode == 'rt':
-    read_wrapper = codecs.getreader('utf-8')
-    return read_wrapper(_open_binary(path, 'r'))
-  elif mode == 'wt':
-    write_wrapper = codecs.getwriter('utf-8')
-    return write_wrapper(_open_binary(path, 'w'))
-  else:
-    raise NotImplementedError()
-
-
-def _open_binary(path, read_or_write_mode):
-  """Opens a file in binary mode since gcsio.GcsIO can't handle text."""
-  assert read_or_write_mode in 'rw'
-  if path.startswith('gs://'):
-    gcs = beam.io.gcp.gcsio.GcsIO()
-    return gcs.open(path, read_or_write_mode)
-  else:
-    return open(path, read_or_write_mode + 'b')
+  return fsspec.open(path, mode)

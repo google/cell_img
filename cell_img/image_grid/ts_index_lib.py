@@ -384,12 +384,12 @@ class TensorstoreIndex():
     return tuple(to_return)
 
   def get_square_patch_slice(
-      self, labels, offsets: Dict[str, int], patch_size: int
-      ) -> Tuple[Union[int, slice]]:
+      self, labels, offsets: Dict[str, int], patch_size: int,
+      require_within_single_image=True) -> Tuple[Union[int, slice]]:
     """Returns a slice specifying the location of a patch image in tensorstore.
 
-    Note that this ignores site image boundaries. The labels parameter returns
-    the corner of the block and the offsets are added to those dimensions.
+    Patches cannot be taken across whole images, even if these images tile so
+    there is a valid image adjacent.
 
     Sample usage:
     # Get the patch slice to specify the image coords in tensorstore.
@@ -409,13 +409,19 @@ class TensorstoreIndex():
       patch_size: Integer length along one side of the square. For patch_size
           of N, the returned patch will be of size N by N, centered on the
           point found by the labels + offsets.
+      require_within_single_image: Boolean, defaults to True. If True, the
+          indicated patch must fit entirely within a single whole image.
     Returns:
       A tuple of slices and ints suitable for reading/writing the image from
       tensorstore.
+    Raises:
+      ValueError: If the patch boundaries cross whole images and
+      require_within_single_image is True (default).
     """
     start_coords = self.get_coords_dict(labels)
     half_patch_size = patch_size // 2
     to_return = []
+    used_offsets = set()
     for axis_name in self.axes:
       start_coord = start_coords[axis_name]
       unit_size = self.unit_sizes.get(axis_name, 1)
@@ -424,12 +430,35 @@ class TensorstoreIndex():
         to_return.append(int(start_coord))
       else:
         if axis_name in offsets:
+          used_offsets.add(axis_name)
           center_coord = start_coord + offsets[axis_name]
         else:
           center_coord = start_coord
+        start_patch_coord = center_coord - half_patch_size
+        end_patch_coord = center_coord + half_patch_size
+        # a patch has crossed an image boundary if the the start and end
+        # patch coordinates are in different blocks by unit size.
+        if (require_within_single_image and
+            (start_patch_coord // unit_size) != (end_patch_coord // unit_size)):
+          raise ValueError(
+              'Illegal patch coordinates across multiple whole images. '
+              'Try reducing patch size or moving offsets away from edge.\n'
+              'labels: %s\n'
+              'offsets: %s\n'
+              'patch_size: %s\n'
+              'resulting start and stop at %d and %d respectively\n'
+              '(in blocks %d and %d)\n' % (
+                  labels, offsets, patch_size, start_patch_coord,
+                  end_patch_coord, start_patch_coord // unit_size,
+                  end_patch_coord // unit_size))
+
         to_return.append(
-            slice((center_coord - half_patch_size),
-                  (center_coord + half_patch_size)))
+            slice(start_patch_coord, end_patch_coord))
+
+    if set(offsets.keys()).difference(used_offsets):
+      raise ValueError('Axis name(s) not used in creating patch: %s' % (
+          set(offsets.keys()).difference(used_offsets)))
+
     return tuple(to_return)
 
 
