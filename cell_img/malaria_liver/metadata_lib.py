@@ -135,7 +135,7 @@ class MetadataIndex(object):
       patch_size: The integer length of one side of the square patch.
 
     Returns:
-    A numpy array with the raw images from tensorstore.
+    A numpy array with the raw channel images from tensorstore.
     """
 
     # set up slices for all the stains in this project
