@@ -189,9 +189,14 @@ class MetadataIndex(object):
 
     return image_list
 
-  def contact_sheet_for_df(self, example_df: pd.DataFrame, patch_size: int,
-                           ncols: int, nrows: int, name_for_x_col: str,
-                           name_for_y_col: str) -> plt.Figure:
+  def contact_sheet_for_df(self,
+                           example_df: pd.DataFrame,
+                           patch_size: int,
+                           ncols: int,
+                           nrows: int,
+                           name_for_x_col: str,
+                           name_for_y_col: str,
+                           norm_then_stack: bool = True) -> plt.Figure:
     """Given a dataframe, creates a thumbnail contact sheet.
 
     Args:
@@ -203,7 +208,15 @@ class MetadataIndex(object):
       name_for_x_col: String name of the column in the dataframe with the x
         coordinate of the patch center, within the site image.
       name_for_y_col: String name of the column in the dataframe with the y
-        coordinate of the patch center, within the site image.
+        coordinate of the patch center, within the site image. The values in
+        this column can be floats or ints, but will be converted to ints in
+        order to grab whole pixels for the patch image.
+      norm_then_stack: Boolean indicating how normalization should be done. The
+        default True indicates that each stain will be normalized to the full
+        brightness range, then the stains will be stacked. This makes sure dim
+        stains are visible in the composite. A False value will stack the stains
+        and then normalize, ensuring that relative brightness values are
+        conserved.
 
     Returns:
       A matplotlib figure with the contact sheet.
@@ -221,10 +234,13 @@ class MetadataIndex(object):
         name_for_x_col=name_for_x_col,
         name_for_y_col=name_for_y_col,
         patch_size=patch_size)
-    figure = image_lib.create_contact_sheet(
-        [image_lib.normalize_image(x) for x in raw_image_list],
-        ncols=ncols,
-        nrows=nrows)
+    if norm_then_stack:
+      norm_imgs = [
+          image_lib.normalize_per_color_image(x) for x in raw_image_list
+      ]
+    else:
+      norm_imgs = [image_lib.normalize_image(x) for x in raw_image_list]
+    figure = image_lib.create_contact_sheet(norm_imgs, ncols=ncols, nrows=nrows)
 
     return figure
 
@@ -451,5 +467,3 @@ class MetadataCache(object):
 
     plate_df.set_index(['plate',], inplace=True)
     return plate_df
-
-
