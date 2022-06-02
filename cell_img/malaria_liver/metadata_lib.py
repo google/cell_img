@@ -21,6 +21,7 @@ from cell_img.common import image_lib
 from cell_img.common import io_lib
 from cell_img.image_grid import ts_index_lib
 from cell_img.image_grid import ts_write_lib
+from cell_img.malaria_liver import metadata_cache
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,6 +45,8 @@ class MetadataIndex(object):
       channel_list: String list of channel names for the image stack,
         e.g. ['w3', 'w2', 'w1']. Images pulled from tensorstore will have
         these channels in this order (so, you often want them in RGB order).
+      metadata_root_path: String path of the directory where the metadata is
+        stored.
     """
     self.ts_root_path = tensorstore_root_path
     self.ts_index = self._get_ts_index(tensorstore_root_path)
