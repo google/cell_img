@@ -5,8 +5,8 @@ import os
 from absl import flags
 from absl.testing import absltest
 from absl.testing import flagsaver
+from cell_img.common import io_lib
 from cell_img.image_grid import downsample_lib
-from cell_img.image_grid import io_lib
 from cell_img.image_grid import test_data
 from cell_img.image_grid import ts_index_lib
 from cell_img.image_grid import ts_write_lib

@@ -8,8 +8,17 @@ import numpy as np
 import pandas as pd
 
 
-def mock_train_models_on_cv_folds(split_data, n_dimensions, n_labels, **kwargs):
-  del kwargs, n_dimensions, n_labels  # unused
+def mock_train_models_on_cv_folds(split_data,
+                                  n_dimensions,
+                                  n_labels,
+                                  use_label_smoothing=True,
+                                  n1=64,
+                                  n2=32,
+                                  p_dropout=0.5,
+                                  epochs=4000,
+                                  kwargs=None):
+  # unused
+  del n_dimensions, n_labels, use_label_smoothing, n1, n2, p_dropout, epochs, kwargs  # pylint: disable=line-too-long
   return [None] * len(split_data), None
 
 
@@ -189,7 +198,7 @@ class BaldPhenotypesTrainModelTest(absltest.TestCase):
         n2=2,
         p_dropout=0.5,
         epochs=2,
-        patience=1)
+        kwargs={'patience': 1})
     # check output shape
     prediction = model.predict(np.array([[2], [3]]))
     self.assertEqual(prediction.shape, (2, 3))
@@ -202,11 +211,8 @@ class BaldPhenotypesTrainModelTest(absltest.TestCase):
 class BaldPhenotypesComputeTest(absltest.TestCase):
 
   @mock.patch.object(
-      bald_lib,
-      '_train_models_on_cv_folds',
-      new=mock_train_models_on_cv_folds)
-  @mock.patch.object(
-      bald_lib, '_make_label_dict', new=mock_make_label_dict)
+      bald_lib, '_train_models_on_cv_folds', new=mock_train_models_on_cv_folds)
+  @mock.patch.object(bald_lib, '_make_label_dict', new=mock_make_label_dict)
   @mock.patch.object(
       bald_lib, '_compute_predictions', new=mock_compute_predictions)
   def test_compute_bald_with_cv(self):
