@@ -44,6 +44,8 @@ class MetadataIndex(object):
       channel_list: String list of channel names for the image stack,
         e.g. ['w3', 'w2', 'w1']. Images pulled from tensorstore will have
         these channels in this order (so, you often want them in RGB order).
+      metadata_root_path: String path of the directory where the metadata is
+        stored.
     """
     self.ts_root_path = tensorstore_root_path
     self.ts_index = self._get_ts_index(tensorstore_root_path)
