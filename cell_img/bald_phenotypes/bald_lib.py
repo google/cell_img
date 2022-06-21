@@ -87,11 +87,11 @@ def sample_wells(emb_df: pd.DataFrame, label_category: str,
   labels = well_counts[label_category].unique()
   df_sampled = []
   for label in labels:
-    subset = well_counts.query('%s=="%s"' %
+    subset = well_counts.query('%s==%r' %
                                (label_category, label)).values[:, :3]
     for i in range(min(len(subset), n_sampled)):
       df_sampled.append(
-          emb_df.query('batch=="%s" and plate=="%s" and well=="%s"' %
+          emb_df.query('batch==%r and plate==%r and well==%r' %
                        (subset[i][0], subset[i][1], subset[i][2])))
   return pd.concat(df_sampled)
 
@@ -555,8 +555,8 @@ def plot_bald_probability(
     ax = flattened_ax[i]
     i += 1
 
-    examples_in_category = stats_df.query('%s=="%s"' % (label_category, label))
-    true_positives = examples_in_category.query('label=="%s"' % label)
+    examples_in_category = stats_df.query('%s==%r' % (label_category, label))
+    true_positives = examples_in_category.query('label==%r' % label)
     ax.scatter(
         examples_in_category.label_prob,
         examples_in_category.bald,
@@ -599,7 +599,7 @@ def plot_confusion_matrix(
     np.array of the confusion matrix and corresponding labels
   """
   if control_category:
-    stats_df = stats_df.query('%s!="%s"' % (label_category, control_category))
+    stats_df = stats_df.query('%s!=%r' % (label_category, control_category))
   labels = sorted(stats_df[label_category].unique())
   confusion_mat = sklearn.metrics.confusion_matrix(
       stats_df[label_category].values, stats_df.label.values, labels=labels)
