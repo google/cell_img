@@ -1,5 +1,6 @@
 """Compute iqr_z values that standardize values within a null_agg_keys grouping."""
 
+from cell_img.analysis import relaxed_lasso
 import numpy as np
 import pandas as pd
 import scipy.stats
@@ -58,7 +59,9 @@ def compute_null_expectation_for_column_using_sklearn(orig_df, make_blocks,
   lasso1 = make_model()
   lasso1.fit(x_df, y)
   beta = pd.DataFrame(
-      lasso1.coef_[:, np.newaxis], index=x_df.columns, columns=[y.name])
+      lasso1.coef_.flatten()[:, np.newaxis],
+      index=x_df.columns,
+      columns=[y.name])
   beta.loc['intercept', y.name] = lasso1.intercept_
   y_hat = pd.Series(lasso1.predict(x_df), index=y.index, name=y.name)
   y_hat_full = pd.Series(
@@ -67,11 +70,17 @@ def compute_null_expectation_for_column_using_sklearn(orig_df, make_blocks,
   return y_hat_full, y_full, y_hat, y, beta, lasso1, x_df, x_df_full, x_df_full2
 
 
+lasso_cv_thunk = lambda: sklearn.linear_model.LassoCV(
+    max_iter=1000000, tol=1E-6)
+relaxo_thunk = lambda: relaxed_lasso.RelaxedLassoCV(
+    max_iter=1000000, tol=1E-6)
+
+
 def compute_null_expectations_using_sklearn(
     orig_df,
     make_blocks,
     filter_to_null,
-    make_model=lambda: sklearn.linear_model.LassoCV(max_iter=1000000, tol=1E-6)
+    make_model=relaxo_thunk
 ):
   accum = {}
   for y_column in orig_df.columns:
