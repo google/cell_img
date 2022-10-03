@@ -343,7 +343,7 @@ def build_platemap(replicates_map: Dict[str, int],
   for (group, compound,
        concentration), num_replicates in replicates_map.items():
     for _ in range(num_replicates):
-      _assign_one(assignment_map, shuffled_wells.pop(), group, compound,
+      _assign_one(assignment_map, shuffled_wells.pop(), group, compound,  # pytype: disable=wrong-arg-types  # mapping-is-not-sequence
                   concentration)
 
   return pd.DataFrame(assignment_map)
@@ -495,7 +495,7 @@ def create_echo_transfer_list(
                              volume_used_per_source_well_map,
                              volume_per_dest_well_map)
 
-  return (transfer_list, volume_per_dest_well_map)
+  return (transfer_list, volume_per_dest_well_map)  # pytype: disable=bad-return-type  # mapping-is-not-sequence
 
 
 def build_source_map_no_dilution(
@@ -545,7 +545,7 @@ def build_source_map_no_dilution(
     echo_source_map[c].append(row['well'])
     volume_remaining_per_source_well_map[row['well']] = float(row['volume'])
 
-  return echo_source_map, volume_remaining_per_source_well_map
+  return echo_source_map, volume_remaining_per_source_well_map  # pytype: disable=bad-return-type  # mapping-is-not-sequence
 
 
 def create_echo_transfer_list_no_dilution(
@@ -610,7 +610,7 @@ def create_echo_transfer_list_no_dilution(
                              volume_used_per_source_well_map,
                              volume_per_dest_well_map)
 
-  return (transfer_list, volume_per_dest_well_map)
+  return (transfer_list, volume_per_dest_well_map)  # pytype: disable=bad-return-type  # mapping-is-not-sequence
 
 
 def build_echo_transfer_str(transfer_list: List[Tuple[str, str, float]],
