@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import pandas as pd
 from sklearn.covariance import OAS
+from cell_img import data_utils
 
 CONTROL_UNINFECTED = 'uninfected_control'
 CONTROL_INACTIVE = 'infected_control'
@@ -332,6 +333,50 @@ def get_t2_summary(t2_df: pd.DataFrame, is_low: pd.Series) -> pd.DataFrame:
         'fraction_different_or_low': fraction_different_or_low,
     })
   return pd.DataFrame(t2_summary)
+
+
+def load_emb_df_from_cloud(filepath,
+                           filetype='parquet',
+                           cell_type='hypnozoite'):
+  """Loads embedding dataframe on cloud and formats it for hotelling's test.
+
+  Args:
+    filepath: file path of the embedding dataframe, can include * for glob
+    filetype: file type of the saved dataframe on cloud
+    cell_type: hypnozoite or hepatocyte
+
+  Returns:
+    embedding dataframe as pd.DataFrame
+  """
+  emb_df = data_utils.read_file_df_from_cloud(filepath, filetype)
+
+  # filter for hypnozoites
+  if cell_type == 'hypnozoite':
+    if 'parasite_stage_names' not in emb_df.columns or 'parasite_stage_infer' not in emb_df.columns:
+      raise ValueError(
+          'parasite stage prediction are not in this dataframe. Make sure parasite_stage_names and parasite_stage_infer are in the columns.'
+      )
+    emb_df['stage'] = [
+        stage[index]
+        for stage, index in zip(emb_df.parasite_stage_names,
+                                emb_df.parasite_stage_infer.apply(np.argmax))
+    ]
+    emb_df = emb_df.query('stage=="%s"' % cell_type)
+
+  # add counts
+  counts = emb_df.groupby(['batch', 'plate', 'well']).count()['site']
+  counts.rename(f'ml_{cell_type}', inplace=True)
+  emb_df = pd.merge(emb_df, counts, how='outer', on=['batch', 'plate', 'well'])
+  emb_df[np.arange(192)] = np.array(
+      [list(item) for item in emb_df.embedding.values])
+  emb_df[np.arange(192)] = np.array(
+      [list(item) for item in emb_df.embedding.values])
+  emb_df.drop(
+      columns=['parasite_stage_infer', 'parasite_stage_names', 'embedding'],
+      inplace=True)
+  emb_df.set_index([c for c in emb_df.columns if c not in np.arange(192)],
+                   inplace=True)
+  return emb_df
 
 
 # TODO(gowoon): Add the patch visualization code that uses image grid,

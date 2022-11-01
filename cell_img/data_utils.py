@@ -23,6 +23,7 @@ import re
 import fsspec
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 CLOUD_HEADER = 'gs://'
 
@@ -127,18 +128,19 @@ def to_file_on_cloud(txt, filepath):
     f.write(txt)
 
 
-def read_h5_df_from_cloud(filepath):
-  """Reads dataframes saved as HDF5 format from cloud.
+def read_file_df_from_cloud(filepath, dtype):
+  """Reads dataframes saved as HDF5 or parquet format from cloud.
 
   Args:
     filepath: A cloud bucket path, eg: 'bucket_name/folder_name/test.html'
+    dtype: data type the dataframe is saved as. Supports 'h5' and 'parquet'
 
   Returns:
     pd.DataFrame read from cloud
   """
   cloud_filepath = os.path.join(CLOUD_HEADER, filepath)
 
-  # We can't read h5 files directly from cloud;
+  # We can't read files directly from cloud;
   # I'll download it to a temp folder and load it here
   # fsspec.open_files handles glob if '*' is in filepath
   openfiles = fsspec.open_files(cloud_filepath)
@@ -149,10 +151,13 @@ def read_h5_df_from_cloud(filepath):
   for idx, openfile in enumerate(openfiles):
     with openfile as f:
       data = f.read()
-    temp_path = 'temp_h5_{}.h5-{:05d}'.format(randstr, idx)
+    temp_path = 'temp_file_{}.file-{:05d}'.format(randstr, idx)
     with open(temp_path, 'wb') as fw:
       fw.write(data)
-    df_shards.append(pd.read_hdf(temp_path))
+    if dtype == 'h5':
+      df_shards.append(pd.read_hdf(temp_path))
+    elif dtype == 'parquet':
+      df_shards.append(pq.read_table(temp_path).to_pandas())
     os.remove(temp_path)
   return pd.concat(df_shards).sort_index()
 
