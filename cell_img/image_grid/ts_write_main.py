@@ -71,7 +71,7 @@ def get_pipeline_options(project, bucket, region):
   """Returns cloud dataflow pipeline options."""
   options = pipeline_options.PipelineOptions(flags=[
       '--setup_file',
-      'cell_img/cell_img/image_grid/worker_setup.py',
+      'cell_img/cell_img/image_grid/setup.py',
       '--runner',
       'DataflowRunner',
       # Flag use_runner_v2 avoids a segfault when worker pool starts.
