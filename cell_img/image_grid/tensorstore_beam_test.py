@@ -146,6 +146,36 @@ class TensorstoreBeamTest(absltest.TestCase):
 
         _ = p_slice_and_array | beam.Map(do_assert)
 
+  def testScheduleAfterShutdown(self):
+    with tempfile.TemporaryDirectory() as dir_path:
+      ts_spec = ts.Spec({
+          'driver': 'n5',
+          'kvstore': {
+              'driver': 'file',
+              'path': dir_path,
+          },
+          'metadata': {
+              'compression': {
+                  'type': 'gzip'
+              },
+              'dataType': 'uint16',
+              'dimensions': [1000, 20000],
+              'blockSize': [10, 10],
+          }
+      })
+
+      # The location and data to be written in beam.
+      view_slice = (slice(80, 82), slice(99, 102))
+      orig_array = np.array([[1, 2, 3], [4, 5, 6]]).astype('uint16')
+
+      write_do_fn = tensorstore_beam._WriteTensorStoreDoFn(
+          ts_spec, create_tensorstore=True)
+      write_do_fn.setup()
+      write_do_fn.teardown()
+      # Submitting tasks after shutdown should not raise an error.
+      _ = list(write_do_fn.process((view_slice, orig_array)))
+
+
 
 class RetryableExecutorTest(absltest.TestCase):
 

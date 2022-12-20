@@ -37,6 +37,9 @@ class RetryableExecutor(concurrent.futures.ThreadPoolExecutor):
     retry_fn = self._add_retry(fn)
     return super().submit(retry_fn, *args, **kwargs)
 
+  def is_shutdown(self):
+    return self._shutdown
+
   def _add_retry(self, func):
     """Returns a function that wraps the input func with retries."""
 
@@ -85,9 +88,6 @@ class _WriteTensorStoreDoFn(beam.DoFn):
                                        _MAX_WORKERS)
     beam.metrics.Metrics.counter(_NAMESPACE, 'write_setup').inc()
 
-  def start_bundle(self):
-    beam.metrics.Metrics.counter(_NAMESPACE, 'write_start_bundle').inc()
-
   def process(self, view_slice_and_array):
     beam.metrics.Metrics.counter(_NAMESPACE, 'write_process').inc()
     view_slice, array = view_slice_and_array
@@ -98,13 +98,17 @@ class _WriteTensorStoreDoFn(beam.DoFn):
                                    'ERROR-dtype=%s' % str(array.dtype)).inc()
     typed_array = array.astype(output_view.dtype.numpy_dtype)
 
+    if self._executor.is_shutdown():
+      beam.metrics.Metrics.counter(_NAMESPACE,
+                                   'Warning: executor already shut down.').inc()
+      return
     self._executor.submit(_write_array_to_view, output_view, typed_array)
     yield view_slice
 
-  def finish_bundle(self):
+  def teardown(self):
     # Wait for all writes to complete, and raise any errors that occurred.
     self._executor.shutdown()
-    beam.metrics.Metrics.counter(_NAMESPACE, 'write_finish_bundle').inc()
+    beam.metrics.Metrics.counter(_NAMESPACE, 'write_teardown').inc()
 
 
 class WriteTensorStore(beam.PTransform):
