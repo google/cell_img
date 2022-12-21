@@ -86,7 +86,13 @@ class _WriteTensorStoreDoFn(beam.DoFn):
         context=_tensorstore_context).result()
     self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,  # pytype: disable=wrong-arg-types  # py39-upgrade
                                        _MAX_WORKERS)
-    beam.metrics.Metrics.counter(_NAMESPACE, 'write_setup').inc()
+    self._write_results = []
+
+  def start_bundle(self):
+    # Create the executor again since it is shutdown on each bundle.
+    self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,  # pytype: disable=wrong-arg-types  # py39-upgrade
+                                       _MAX_WORKERS)
+    beam.metrics.Metrics.counter(_NAMESPACE, 'write_start_bundle').inc()
 
   def process(self, view_slice_and_array):
     beam.metrics.Metrics.counter(_NAMESPACE, 'write_process').inc()
@@ -102,13 +108,19 @@ class _WriteTensorStoreDoFn(beam.DoFn):
       beam.metrics.Metrics.counter(_NAMESPACE,
                                    'Warning: executor already shut down.').inc()
       return
-    self._executor.submit(_write_array_to_view, output_view, typed_array)
+
+    beam.metrics.Metrics.counter(_NAMESPACE, 'write_async_task').inc()
+    future = self._executor.submit(_write_array_to_view, output_view,
+                                   typed_array)
+    self._write_results.append(future)
     yield view_slice
 
-  def teardown(self):
+  def finish_bundle(self):
     # Wait for all writes to complete, and raise any errors that occurred.
-    self._executor.shutdown()
-    beam.metrics.Metrics.counter(_NAMESPACE, 'write_teardown').inc()
+    while self._write_results:
+      self._write_results.pop().result(_TIMEOUT_SEC)
+    self._executor.shutdown(wait=True)
+    beam.metrics.Metrics.counter(_NAMESPACE, 'write_finish_bundle').inc()
 
 
 class WriteTensorStore(beam.PTransform):
@@ -145,7 +157,7 @@ class _ReadTensorStoreDoFn(beam.DoFn):
         context=_tensorstore_context).result()
     self._tensorstore_spec = store.spec()
 
-  def setup(self):
+  def start_bundle(self):
     self._input_store = ts.open(
         self._tensorstore_spec,
         open=True,
@@ -154,9 +166,6 @@ class _ReadTensorStoreDoFn(beam.DoFn):
         context=_tensorstore_context).result()
     self._executor = RetryableExecutor(_MAX_ATTEMPTS, _EXCEPTIONS_TO_CATCH,  # pytype: disable=wrong-arg-types  # py39-upgrade
                                        _MAX_WORKERS)
-    beam.metrics.Metrics.counter(_NAMESPACE, 'read_setup').inc()
-
-  def start_bundle(self):
     self._read_results = queue.Queue(maxsize=_MAX_WORKERS)
     beam.metrics.Metrics.counter(_NAMESPACE, 'read_start_bundle').inc()
 

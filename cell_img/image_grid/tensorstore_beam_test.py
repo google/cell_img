@@ -13,25 +13,29 @@ import numpy as np
 import tensorstore as ts
 
 
+def valid_tensorstore_spec(dir_path):
+  return ts.Spec({
+      'driver': 'n5',
+      'kvstore': {
+          'driver': 'file',
+          'path': dir_path,
+      },
+      'metadata': {
+          'compression': {
+              'type': 'gzip'
+          },
+          'dataType': 'uint16',
+          'dimensions': [1000, 20000],
+          'blockSize': [10, 10],
+      }
+  })
+
+
 class TensorstoreBeamTest(absltest.TestCase):
 
   def testWriteTensorStore(self):
     with tempfile.TemporaryDirectory() as dir_path:
-      ts_spec = ts.Spec({
-          'driver': 'n5',
-          'kvstore': {
-              'driver': 'file',
-              'path': dir_path,
-          },
-          'metadata': {
-              'compression': {
-                  'type': 'gzip'
-              },
-              'dataType': 'uint16',
-              'dimensions': [1000, 20000],
-              'blockSize': [10, 10],
-          }
-      })
+      ts_spec = valid_tensorstore_spec(dir_path)
 
       # The location and data to be written in beam.
       view_slice = (slice(80, 82), slice(99, 102))
@@ -50,21 +54,7 @@ class TensorstoreBeamTest(absltest.TestCase):
 
   def testReadTensorStore(self):
     with tempfile.TemporaryDirectory() as dir_path:
-      ts_spec = ts.Spec({
-          'driver': 'n5',
-          'kvstore': {
-              'driver': 'file',
-              'path': dir_path,
-          },
-          'metadata': {
-              'compression': {
-                  'type': 'gzip'
-              },
-              'dataType': 'uint16',
-              'dimensions': [1000, 20000],
-              'blockSize': [10, 10],
-          }
-      })
+      ts_spec = valid_tensorstore_spec(dir_path)
 
       # First write the data to the location using the serial API.
       view_slice = (slice(80, 82), slice(99, 102))
@@ -98,21 +88,7 @@ class TensorstoreBeamTest(absltest.TestCase):
 
   def testWriteThenReadTensorStore(self):
     with tempfile.TemporaryDirectory() as dir_path:
-      ts_spec = ts.Spec({
-          'driver': 'n5',
-          'kvstore': {
-              'driver': 'file',
-              'path': dir_path,
-          },
-          'metadata': {
-              'compression': {
-                  'type': 'gzip'
-              },
-              'dataType': 'uint16',
-              'dimensions': [1000, 20000],
-              'blockSize': [10, 10],
-          }
-      })
+      ts_spec = valid_tensorstore_spec(dir_path)
 
       # The location and data to be written in beam.
       view_slice = (slice(80, 82), slice(99, 102))
@@ -148,21 +124,7 @@ class TensorstoreBeamTest(absltest.TestCase):
 
   def testScheduleAfterShutdown(self):
     with tempfile.TemporaryDirectory() as dir_path:
-      ts_spec = ts.Spec({
-          'driver': 'n5',
-          'kvstore': {
-              'driver': 'file',
-              'path': dir_path,
-          },
-          'metadata': {
-              'compression': {
-                  'type': 'gzip'
-              },
-              'dataType': 'uint16',
-              'dimensions': [1000, 20000],
-              'blockSize': [10, 10],
-          }
-      })
+      ts_spec = valid_tensorstore_spec(dir_path)
 
       # The location and data to be written in beam.
       view_slice = (slice(80, 82), slice(99, 102))
@@ -175,6 +137,23 @@ class TensorstoreBeamTest(absltest.TestCase):
       # Submitting tasks after shutdown should not raise an error.
       _ = list(write_do_fn.process((view_slice, orig_array)))
 
+  def testWritingTheWrongSizeRaises(self):
+    with tempfile.TemporaryDirectory() as dir_path:
+      ts_spec = valid_tensorstore_spec(dir_path)
+
+      # The location and data to be written in beam.
+      view_slice = (slice(80, 82), slice(99, 102))
+      # Make an array that is too big for this view slice
+      big_array = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype('uint16')
+
+      with self.assertRaisesRegex(ValueError,
+                                  '.*Error aligning dimensions.*'):
+        with TestPipeline(beam.runners.direct.DirectRunner()) as p:
+          p_view_slice_and_array = p | beam.Create([(view_slice, big_array)])
+
+          _ = p_view_slice_and_array = (
+              p_view_slice_and_array | tensorstore_beam.WriteTensorStore(
+                  ts_spec, create_tensorstore=True))
 
 
 class RetryableExecutorTest(absltest.TestCase):
