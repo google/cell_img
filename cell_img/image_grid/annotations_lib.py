@@ -117,7 +117,13 @@ def export_annotations(
     )
     for i, coord in enumerate(coords):
       num_coords = len(coord)
-      writer.add_axis_aligned_bounding_box(coord[:num_coords // 2],
-                                           coord[num_coords // 2:],
-                                           **properties_df.iloc[i].to_dict())
+      if shape == 'point':
+        writer.add_point(coord, **properties_df.iloc[i].to_dict())
+      elif shape == 'rect':
+        writer.add_axis_aligned_bounding_box(coord[:num_coords // 2],
+                                             coord[num_coords // 2:],
+                                             **properties_df.iloc[i].to_dict())
+      else:
+        raise ValueError(
+            f'Shape {shape} not supported, must be "point" or "rect"')
     writer.write(local_output_dir)
