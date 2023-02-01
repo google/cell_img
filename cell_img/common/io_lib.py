@@ -1,8 +1,10 @@
 """IO helpers for writing either locally or to a cloud bucket."""
 
 import codecs
+import csv
 import json
-from typing import IO, Union
+import os
+from typing import Any, Dict, IO, Iterable, List, Union
 
 import fsspec
 import numpy as np
@@ -44,5 +46,29 @@ def write_json_file(to_encode, output_path: str) -> None:
     json.dump(to_encode, f)
 
 
+def write_maps_to_csv(csv_rows: Iterable[Dict[str, Any]], filename: str):
+  _makedirs(os.path.dirname(filename))
+
+  writer = None  # initialized in the loop using the first CsvRow
+  with _open(filename, 'w') as csvfile:
+    for csv_row_map in csv_rows:
+      if not writer:
+        writer = csv.DictWriter(csvfile, fieldnames=csv_row_map.keys())  # pytype: disable=wrong-arg-types
+        writer.writeheader()
+      writer.writerow(csv_row_map)
+
+
+def glob(path_pattern: str) -> List[str]:
+  file_list = fsspec.open_files(path_pattern)
+  # f.path strips the "gs://" for cloud objects
+  return [f.full_name for f in file_list]
+
+
 def _open(path, mode) -> _IO:
   return fsspec.open(path, mode)
+
+
+def _makedirs(path: str):
+  # MakeDirs is not needed on GCS. Override for your system.
+  del path
+  pass
