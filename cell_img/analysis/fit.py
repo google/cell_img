@@ -2,7 +2,7 @@
 
 from typing import Callable, Optional, Tuple, TypeVar
 
-from epi_forecast_stat_mech import optim_lib
+from cell_img.analysis import optim_lib
 import jax
 import jax.numpy as jnp
 

@@ -1,0 +1,4 @@
+* analysis/optim_lib.py is from
+https://github.com/HopkinsIDD/EpiForecastStatMech/blob/master/epi_forecast_stat_mech/optim_lib.py
+It was written in a partnership between Google and the Johns Hopkins University
+Justin Lessler lab and licensed under an Apache 2.0 license.
