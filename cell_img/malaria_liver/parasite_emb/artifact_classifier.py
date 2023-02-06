@@ -1,7 +1,7 @@
 """Contains the beam DoFn to run the artifact classifier lightgbm."""
 
 import copy
-from typing import List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import apache_beam as beam
 from apache_beam.transforms import window
@@ -37,7 +37,7 @@ def _load_lgbm_model(model_txt_path: str, scaling_txt_path: str):
   return artifact_model, scaling_params
 
 
-def _add_artifact_preds(elements: List[dict[Any, Any]],
+def _add_artifact_preds(elements: List[Dict[Any, Any]],
                         model: lightgbm.Booster, scaling_params: np.ndarray,
                         embedding_feature_name: str,):
   """Adds the artifact prediction and stage prediction to the examples.

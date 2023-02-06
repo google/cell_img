@@ -1,7 +1,7 @@
 """Methods for creating embeddings from images."""
 
 import os
-from typing import Optional, List
+from typing import Any, Dict, Iterable, Optional, List
 
 import apache_beam as beam
 from apache_beam.options import pipeline_options
@@ -15,6 +15,39 @@ from cell_img.malaria_liver.parasite_emb import embedding_lib
 from cell_img.malaria_liver.parasite_emb import finding_lib
 from cell_img.malaria_liver.parasite_emb import staging_lib
 from cell_img.malaria_liver.parasite_emb import whole_img_lib
+
+import numpy as np
+
+
+class MeanEmbeddingFn(beam.transforms.core.CombineFn):
+  """CombineFn for computing a mean embedding."""
+
+  def create_accumulator(self):
+    return (np.zeros(192), 0)
+
+  def add_input(self, accumulator, element):
+    this_sum, this_count = accumulator
+    return this_sum + element, this_count + 1
+
+  def merge_accumulators(self, accumulators):
+    sums, counts = zip(*accumulators)
+    return np.sum(sums, axis=0), sum(counts)
+
+  def extract_output(self, accumulator):
+    this_sum, this_count = accumulator
+    if this_count == 0:
+      return float('NaN')
+    return this_sum / float(this_count)
+
+
+def _convert_namedtuple_for_output(element) -> Dict[Any, Any]:
+  """Convert from a NamedTuple back to a dictionary for parquet output."""
+  return element._asdict()
+
+
+def _patch_is_hypnozoite(element: Dict[Any, Any]) -> bool:
+  """Determine if the patch is predicted to be a hypnozoite."""
+  return element[config.STAGE_RESULT] == config.HYPNOZOITE
 
 
 def run_embeddings_pipeline(
@@ -122,6 +155,38 @@ def run_embeddings_pipeline(
               patch_image_dim1=crop_size,
               patch_image_dim2=crop_size,
               num_channels=input_num_channels,
+              emb_dim_size=embedding_model_output_size * input_num_channels),
+          num_shards=num_output_shards))
+
+  # limit to hypnozoites and save
+  p_hypnozoite = (
+      p_patches | 'FilterHypno' >> beam.Filter(_patch_is_hypnozoite))
+  _ = (
+      p_hypnozoite
+      | 'ConvertHypnozoiteImageForOutput' >> beam.Map(
+          whole_img_lib.convert_img_for_output)
+      | 'WriteHypnoPatches' >> beam.io.parquetio.WriteToParquet(
+          os.path.join(output_dir, 'hypnozoite_patches.parquet'),
+          schema=config.get_processed_patch_schema(
+              patch_image_dim1=crop_size,
+              patch_image_dim2=crop_size,
+              num_channels=input_num_channels,
+              emb_dim_size=embedding_model_output_size * input_num_channels),
+          num_shards=num_output_shards))
+
+  # group hypnozoites by plate/well and calculate the mean embeddings
+  _ = (
+      p_hypnozoite | 'CalcMeanEmb' >> beam.GroupBy(
+          batch=lambda e: e[config.BATCH],
+          plate=lambda e: e[config.PLATE],
+          well=lambda e: e[config.WELL],
+          ).aggregate_field(
+              lambda e: e[config.EMBEDDING],
+              MeanEmbeddingFn(), config.MEAN_EMBEDDING)
+      | 'ConvertMeanEmbForOutput' >> beam.Map(_convert_namedtuple_for_output)
+      | 'WriteMeanEmbedding' >> beam.io.parquetio.WriteToParquet(
+          os.path.join(output_dir, 'well_mean_hypnozoite.parquet'),
+          schema=config.get_mean_embedding_schema(
               emb_dim_size=embedding_model_output_size * input_num_channels),
           num_shards=num_output_shards))
 

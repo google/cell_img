@@ -24,6 +24,7 @@ STAGING_CLASSES = [ARTIFACT, HYPNOZOITE, SCHIZONT]
 STAGE_RESULT = 'stage_result'
 FINDING_CONFIDENCE = 'finding_confidence'
 FINDING_OVERLAP = 'finding_overlap'
+MEAN_EMBEDDING = 'mean_embedding'
 
 CHANNEL = 'channel'
 IMAGE_PATH = 'image_path'
@@ -102,4 +103,14 @@ def get_processed_patch_schema(patch_image_dim1, patch_image_dim2, num_channels,
       (STAGE_RESULT, pyarrow.string()),
       (FINDING_CONFIDENCE, pyarrow.float32()),
       (FINDING_OVERLAP, pyarrow.bool_())
+  ])
+
+
+def get_mean_embedding_schema(emb_dim_size):
+  return pyarrow.schema([
+      (BATCH, pyarrow.string()),
+      (PLATE, pyarrow.string()),
+      (WELL, pyarrow.string()),
+      (MEAN_EMBEDDING,
+       pyarrow.list_(pyarrow.float32(), list_size=emb_dim_size)),
   ])
