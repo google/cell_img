@@ -65,7 +65,7 @@ def _add_artifact_preds(elements: List[Dict[Any, Any]],
 
 
 def _extract_embedding_array(
-    elements: List[dict[Any, Any]],
+    elements: List[Dict[Any, Any]],
     embedding_feature_name: str) -> np.ndarray:
   """Create a np array with the embeddings from the proto list."""
   emb_list = []
@@ -82,7 +82,7 @@ def _extract_embedding_array(
 
 
 def save_one_prediction(artifact_pred: float,
-                        example_element: dict[Any, Any]):
+                        example_element: Dict[Any, Any]):
   """Updates the example with the artifact prediction and a class prediction."""
   example_element[config.ARTIFACT_PRED] = artifact_pred
 

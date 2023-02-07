@@ -1,7 +1,7 @@
 """Methods for creating embeddings from images."""
 
 import os
-from typing import Any, Dict, Iterable, Optional, List
+from typing import Any, Dict, Optional, List
 
 import apache_beam as beam
 from apache_beam.options import pipeline_options
