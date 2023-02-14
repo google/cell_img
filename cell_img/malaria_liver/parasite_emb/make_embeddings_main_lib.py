@@ -175,6 +175,7 @@ def run_embeddings_pipeline(
           num_shards=num_output_shards))
 
   # group hypnozoites by plate/well and calculate the mean embeddings
+  # this file will be much smaller, only use 1 output shard
   _ = (
       p_hypnozoite | 'CalcMeanEmb' >> beam.GroupBy(
           batch=lambda e: e[config.BATCH],
@@ -188,7 +189,7 @@ def run_embeddings_pipeline(
           os.path.join(output_dir, 'well_mean_hypnozoite.parquet'),
           schema=config.get_mean_embedding_schema(
               emb_dim_size=embedding_model_output_size * input_num_channels),
-          num_shards=num_output_shards))
+          num_shards=1))
 
   _ = (
       p_patches | 'object_counts' >> counts_lib.WellCountAggregator(

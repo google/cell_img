@@ -61,7 +61,6 @@ class BatchDoFn(beam.DoFn):
     def _convert_multichannel_to_batch(img):
       # Put into range 0 to 1.0 range.
       img = tf.cast(img, tf.float32)
-      img /= 255.0
       # Expect (row, col, channel) image.
       imgs = tf.transpose(img, perm=[2, 0, 1])
       imgs = tf.expand_dims(imgs, axis=-1)

@@ -5,10 +5,8 @@ from typing import Any, Dict, List, Tuple
 from cell_img.common import io_lib
 from cell_img.malaria_liver.parasite_emb import config
 
-import fsspec
 import numpy as np
 import pandas as pd
-from PIL import Image
 
 
 def _validate_columns(df: pd.DataFrame, required_columns: List[str],
@@ -35,6 +33,14 @@ def load_and_validate_metadata(
   well_metadata_df = io_lib.read_csv(well_metadata_csv)
   _validate_columns(well_metadata_df, [config.PLATE_UID,
                                        config.WELL], 'well_metadata')
+
+  # If the CSV was saved with no index, drop the unnamed column
+  unnamed_c = [c for c in image_metadata_df.columns if c.startswith('Unnamed:')]
+  if unnamed_c:
+    image_metadata_df = image_metadata_df.drop(columns=unnamed_c)
+  unnamed_c = [c for c in well_metadata_df.columns if c.startswith('Unnamed:')]
+  if unnamed_c:
+    well_metadata_df = well_metadata_df.drop(columns=unnamed_c)
 
   return image_metadata_df, well_metadata_df
 
@@ -97,14 +103,13 @@ def load_img(elem: Dict[str, Any], raw_channel_order: List[str],
   all_images = []
   for channel, channel_path in zip(elem['channel'].split(),
                                    elem['image_path'].split()):
-    with fsspec.open(channel_path, mode='rb') as f:
-      img = np.asarray(Image.open(f))
-      img = img / 65535.
-      if tuple(img.shape) != tuple(whole_image_size):
-        raise ValueError(f'Image: {channel_path} has shape {img.shape} when '
-                         f'expected {whole_image_size}')
-      channel_num = raw_channel_order.index(channel)
-      all_images.append((channel_num, img))
+    img = io_lib.read_image(channel_path)
+    img = img / 65535.
+    if tuple(img.shape) != tuple(whole_image_size):
+      raise ValueError(f'Image: {channel_path} has shape {img.shape} when '
+                       f'expected {whole_image_size}')
+    channel_num = raw_channel_order.index(channel)
+    all_images.append((channel_num, img))
   # Ensure that we have all the expected number of channels.
   if len(all_images) != len(channel_order):
     channel_paths = elem['image_path'].split()

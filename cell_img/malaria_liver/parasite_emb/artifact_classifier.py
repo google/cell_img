@@ -7,8 +7,8 @@ import apache_beam as beam
 from apache_beam.transforms import window
 from apache_beam.utils import windowed_value
 
-
 from cell_img.malaria_liver.parasite_emb import config
+import fsspec
 import jax
 import jax.numpy as jnp
 
@@ -28,11 +28,19 @@ DAPI_EMB_SIZE = 64
 
 def _load_lgbm_model(model_txt_path: str, scaling_txt_path: str):
   """Load the lightgbm model from disk."""
-  # load the model and scaling params
-  # lightgbm does not play well with gfile so copy the model to a local
-  # tmp file to load.
-  artifact_model = lightgbm.Booster(model_file=model_txt_path)
-  scaling_params = np.load(scaling_txt_path)
+
+  # download the lightgbm models to ensure they are local
+  model_tmpfile = 'lgbm2.txt'
+  with fsspec.open(model_txt_path, 'rt') as infile:
+    with fsspec.open(model_tmpfile, 'wt') as outfile:
+      outfile.write(infile.read())
+  artifact_model = lightgbm.Booster(model_file=model_tmpfile)
+
+  scaling_tmpfile = 'scaling.npy'
+  with fsspec.open(scaling_txt_path, 'rb') as infile:
+    with fsspec.open(scaling_tmpfile, 'wb') as outfile:
+      outfile.write(infile.read())
+  scaling_params = np.load(scaling_tmpfile)
 
   return artifact_model, scaling_params
 
