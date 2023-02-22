@@ -206,7 +206,7 @@ def get_log_prob_count(
         -jax.scipy.special.gammaln(1. + y) +
         r * jnp.log(p) + y * jnp.log(1. - p))
 
-  return log_prob_count
+  return log_prob_count  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def get_normal_log_prob_from_summary_stats(
@@ -285,7 +285,7 @@ def get_log_prob_pred(df: pd.DataFrame,) -> jnp.ndarray:
         mu=mu,
         sigma_sq=sigma_sq,
     )
-  return log_prob_pred
+  return log_prob_pred  # pytype: disable=bad-return-type  # jax-ndarray
 
 
 def get_objective_count(
@@ -296,7 +296,7 @@ def get_objective_count(
   log_prob_count = get_log_prob_count(df=df, count_column=count_column)
 
   def _objective_count(params: InhibitionParams) -> jnp.ndarray:
-    return jnp.mean(log_prob_count(params))
+    return jnp.mean(log_prob_count(params))  # pytype: disable=not-callable  # jax-ndarray
   return _objective_count
 
 
@@ -307,7 +307,7 @@ def get_objective_appearance(
   log_prob_pred = get_log_prob_pred(df=df)
 
   def _objective_appearance(params: InhibitionParams) -> jnp.ndarray:
-    return jnp.mean(log_prob_pred(params))
+    return jnp.mean(log_prob_pred(params))  # pytype: disable=not-callable  # jax-ndarray
   return _objective_appearance
 
 
@@ -320,5 +320,5 @@ def get_objective_joint(
   log_prob_pred = get_log_prob_pred(df=df)
 
   def _objective_joint(params: InhibitionParams) -> jnp.ndarray:
-    return jnp.mean(log_prob_count(params) + log_prob_pred(params))
+    return jnp.mean(log_prob_count(params) + log_prob_pred(params))  # pytype: disable=not-callable  # jax-ndarray
   return _objective_joint

@@ -24,7 +24,7 @@ class NegbinTest(absltest.TestCase):
         nb = negbin.NegBin(lam=lam, kappa=kappa)
         log_probs = []
         for i in range(200):
-          log_probs.append(nb.log_prob(i))
+          log_probs.append(nb.log_prob(i))  # pytype: disable=wrong-arg-types  # jax-ndarray
         lse = jax.scipy.special.logsumexp(jnp.array(log_probs))
         np.testing.assert_allclose(lse, 0., atol=1.e-5)
 
@@ -34,7 +34,7 @@ class NegbinTest(absltest.TestCase):
         nb = negbin.NegBin(lam=lam, kappa=kappa)
         expected = 0.
         for i in range(200):
-          expected += i * jnp.exp(nb.log_prob(i))
+          expected += i * jnp.exp(nb.log_prob(i))  # pytype: disable=wrong-arg-types  # jax-ndarray
         np.testing.assert_allclose(expected, nb.mean(), atol=1.e-2)
 
   def test_var(self):
@@ -43,7 +43,7 @@ class NegbinTest(absltest.TestCase):
         nb = negbin.NegBin(lam=lam, kappa=kappa)
         expected = 0.
         for i in range(200):
-          expected += ((i - nb.mean()) ** 2.) * jnp.exp(nb.log_prob(i))
+          expected += ((i - nb.mean()) ** 2.) * jnp.exp(nb.log_prob(i))  # pytype: disable=wrong-arg-types  # jax-ndarray
         np.testing.assert_allclose(expected, nb.var(), rtol=1.e-2)
 
   def test_log_prob_agrees_with_scipy_nb2(self):
@@ -58,7 +58,7 @@ class NegbinTest(absltest.TestCase):
         p = nb.mean() / nb.var()
         for y in range(5):
           np.testing.assert_allclose(
-              nb.log_prob(y),
+              nb.log_prob(y),  # pytype: disable=wrong-arg-types  # jax-ndarray
               scipy.stats.nbinom.logpmf(k=y, n=n, p=p, loc=0.),
               atol=1.e-5)
 
@@ -78,7 +78,7 @@ class NegbinTest(absltest.TestCase):
   def test_sample_with_zeros(self):
     lam = jnp.concatenate(
         [jnp.zeros((10,)), jnp.ones(10000), jnp.zeros((10,))])
-    nb = negbin.NegBin(lam=lam, kappa=3.)
+    nb = negbin.NegBin(lam=lam, kappa=3.)  # pytype: disable=wrong-arg-types  # jax-ndarray
     s = nb.sample(key=self.key)
     self.assertTrue(jnp.all(s[:10] == 0.))
     self.assertTrue(jnp.all(s[-10:] == 0.))
