@@ -59,10 +59,6 @@ class CustomCommands(setuptools.Command):
     for command in CUSTOM_COMMANDS:
       self.RunCustomCommand(command)
 
-PY_MODULES = [
-    'data_utils',
-]
-
 setuptools.setup(
     name='cell_img',
     version='0.0.1',
@@ -76,7 +72,6 @@ setuptools.setup(
         'pandas>=1.2.1',
         'tensorstore>=0.1.10',
     ],
-    py_modules=PY_MODULES,
     packages=setuptools.find_packages(),
     include_package_data=True,
     cmdclass={

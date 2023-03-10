@@ -3,13 +3,14 @@
 
 import functools
 from typing import Optional
+from cell_img.common import data_utils
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pandas as pd
 from sklearn.covariance import OAS
-from cell_img import data_utils
+
 
 CONTROL_UNINFECTED = 'uninfected_control'
 CONTROL_INACTIVE = 'infected_control'

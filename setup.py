@@ -2,10 +2,6 @@
 
 import setuptools
 
-PY_MODULES = [
-    'data_utils',
-]
-
 setuptools.setup(
     name='cell_img',
     version='0.0.1',
@@ -23,6 +19,5 @@ setuptools.setup(
         'scipy>=1.10',
         'tensorstore>=0.1.10'
     ],
-    py_modules=PY_MODULES,
     packages=setuptools.find_packages(),
 )

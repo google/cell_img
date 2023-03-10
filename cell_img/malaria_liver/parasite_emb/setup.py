@@ -60,10 +60,6 @@ class CustomCommands(setuptools.Command):
     for command in CUSTOM_COMMANDS:
       self.RunCustomCommand(command)
 
-PY_MODULES = [
-    'data_utils',
-]
-
 setuptools.setup(
     name='cell_img',
     version='0.0.1',
@@ -74,7 +70,7 @@ setuptools.setup(
         'fsspec[gcs]',
         'keras>=2.11.0',
         'jaxlib>=0.3.25',
-        'lightgbm==2.2.3',
+        'lightgbm>=2.2.3',
         'numpy>=1.19.5',
         'Pillow>=8.1.0',
         'pandas>=1.2.1',
@@ -83,7 +79,6 @@ setuptools.setup(
         'tensorflow-hub>=0.12.0',
         'tensorflow>=2.11.0',
     ],
-    py_modules=PY_MODULES,
     packages=setuptools.find_packages(),
     include_package_data=True,
     cmdclass={

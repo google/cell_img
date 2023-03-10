@@ -17,14 +17,12 @@
 
 import unittest
 import cell_img
-from cell_img import data_utils
 
 
 class CellImgTest(unittest.TestCase):
 
   def test_import(self):
     self.assertTrue(cell_img)
-    self.assertTrue(data_utils)
 
 if __name__ == '__main__':
   unittest.main()
