@@ -31,6 +31,7 @@ IMAGE_PATH = 'image_path'
 CHANNEL_ORDER = 'channel_order'
 IMAGE = 'image'
 EMBEDDING = 'embedding'
+CENTER_RECORDS = 'center_records'
 
 
 def format_plate_strings(plate_names):
@@ -103,6 +104,29 @@ def get_processed_patch_schema(patch_image_dim1, patch_image_dim2, num_channels,
       (STAGE_RESULT, pyarrow.string()),
       (FINDING_CONFIDENCE, pyarrow.float32()),
       (FINDING_OVERLAP, pyarrow.bool_())
+  ])
+
+
+def get_object_processed_patch_schema(patch_image_dim1, patch_image_dim2,
+                                      num_channels, emb_dim_size):
+  flat_image_size = patch_image_dim1 * patch_image_dim2 * num_channels
+  image_schema = pyarrow.struct([
+      ('shape', pyarrow.list_(pyarrow.uint16(), list_size=3)),
+      ('values', pyarrow.list_(pyarrow.float32(), list_size=flat_image_size))
+  ])
+  return pyarrow.schema([
+      (BATCH, pyarrow.string()),
+      (PLATE, pyarrow.string()),
+      (WELL, pyarrow.string()),
+      (SITE, pyarrow.string()),
+      (CENTER_ROW, pyarrow.int32()),
+      (CENTER_COL, pyarrow.int32()),
+      (CROP_ROW, pyarrow.int32()),
+      (CROP_COL, pyarrow.int32()),
+      (EMBEDDING, pyarrow.list_(pyarrow.float32(), list_size=emb_dim_size)),
+      (IMAGE, image_schema),
+      (CHANNEL_ORDER, pyarrow.list_(pyarrow.string(), list_size=num_channels)),
+      (STAGE_RESULT, pyarrow.string()),
   ])
 
 

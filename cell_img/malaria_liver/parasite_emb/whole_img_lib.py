@@ -1,12 +1,24 @@
 """Library for fetching and preprocessing images prior to analysis."""
 import copy
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from cell_img.common import io_lib
 from cell_img.malaria_liver.parasite_emb import config
 
 import numpy as np
 import pandas as pd
+
+# This is the input CSV with the filenames for the whole image files.
+IMAGE_REQUIRED_COLUMNS = [config.CHANNEL, config.IMAGE_PATH, config.PLATE,
+                          config.WELL, config.SITE]
+# This is the input CSV with metadata per well, used when running the
+# pipeline that finds and stages parasites.
+WELL_METADATA_REQUIRED_COLUMNS = [config.PLATE, config.WELL]
+# This is the input CSV with the metadata per object, used when finding and
+# staging is done outside this pipeline.
+OBJECT_METADATA_REQUIRED_COLUMNS = [
+    config.PLATE, config.WELL, config.SITE, config.CENTER_ROW,
+    config.CENTER_COL, config.STAGE_RESULT]
 
 
 def _validate_columns(df: pd.DataFrame, required_columns: List[str],
@@ -20,37 +32,30 @@ def _validate_columns(df: pd.DataFrame, required_columns: List[str],
         df_name_for_error, cols_not_found))
 
 
-def load_and_validate_metadata(
-    image_csv: str, well_metadata_csv: str
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_and_validate_one_csv(
+    csv_path: str, required_cols: List[str], name_for_error_str: str
+    ) ->pd.DataFrame:
   """Loads dataframes and checks required columns."""
 
-  image_metadata_df = io_lib.read_csv(image_csv)
-  _validate_columns(
-      image_metadata_df,
-      [config.CHANNEL, config.IMAGE_PATH, config.PLATE_UID,
-       config.WELL, config.SITE], 'image')
-  well_metadata_df = io_lib.read_csv(well_metadata_csv)
-  _validate_columns(well_metadata_df, [config.PLATE_UID,
-                                       config.WELL], 'well_metadata')
+  df = io_lib.read_csv(csv_path)
+  # if plate_uid exists but no plate, use plate for now.
+  if config.PLATE not in df.columns:
+    if config.PLATE_UID in df.columns:
+      df[config.PLATE] = df[config.PLATE_UID]
+  _validate_columns(df, required_cols, name_for_error_str)
 
   # If the CSV was saved with no index, drop the unnamed column
-  unnamed_c = [c for c in image_metadata_df.columns if c.startswith('Unnamed:')]
+  unnamed_c = [c for c in df.columns if c.startswith('Unnamed:')]
   if unnamed_c:
-    image_metadata_df = image_metadata_df.drop(columns=unnamed_c)
-  unnamed_c = [c for c in well_metadata_df.columns if c.startswith('Unnamed:')]
-  if unnamed_c:
-    well_metadata_df = well_metadata_df.drop(columns=unnamed_c)
+    df = df.drop(columns=unnamed_c)
 
-  return image_metadata_df, well_metadata_df
+  return df
 
 
-def read_metadata(image_csv: str, well_metadata_csv: str
-                  ) -> List[Dict[str, Any]]:
-  """Extracts image and well metadata dataFrames and merge them."""
-
-  image_metadata_df, well_metadata_df = load_and_validate_metadata(
-      image_csv, well_metadata_csv)
+def prep_image_df(image_csv: str):
+  """Loads the image df from csv, validates and preps it."""
+  image_metadata_df = load_and_validate_one_csv(
+      image_csv, IMAGE_REQUIRED_COLUMNS, 'image')
 
   image_columns = ['channel', 'image_path']
   # Stain columns may not always be present, but if they are present, then
@@ -65,12 +70,23 @@ def read_metadata(image_csv: str, well_metadata_csv: str
       config.CHANNEL, config.IMAGE_PATH
   ]].agg(' '.join).reset_index()
 
+  return image_metadata_df
+
+
+def read_metadata(image_csv: str, well_metadata_csv: str
+                  ) -> List[Dict[str, Any]]:
+  """Extracts image and well metadata dataFrames and merge them."""
+
+  image_metadata_df = prep_image_df(image_csv)
+  well_metadata_df = load_and_validate_one_csv(
+      well_metadata_csv, WELL_METADATA_REQUIRED_COLUMNS, 'well_metadata')
+
   df = pd.merge(
       image_metadata_df,
       well_metadata_df,
       how='inner',
       on=[
-          config.PLATE_UID,
+          config.PLATE,
           config.WELL,
       ]).reset_index()
 
@@ -83,17 +99,68 @@ def read_metadata(image_csv: str, well_metadata_csv: str
                      'metadata:\n   ' + '\n   '.join(image_paths_no_metadata))
 
   # Modify columns to match expected format.
-  df[config.PLATE_UID] = df[config.PLATE_UID].apply(
+  df[config.PLATE] = df[config.PLATE].apply(
       lambda x: str(x).zfill(5))
   df[config.SITE] = df[config.SITE].apply(
       lambda x: str(x).zfill(5))
 
   if config.BATCH not in df.columns:
-    df[config.BATCH] = df[config.PLATE_UID]
-  if config.PLATE not in df.columns:
-    df[config.PLATE] = df[config.PLATE_UID]
+    df[config.BATCH] = df[config.PLATE]
+  if config.PLATE_UID not in df.columns:
+    df[config.PLATE_UID] = df[config.PLATE]
 
   return df.to_dict('records')
+
+
+def read_object_metadata(image_csv: str, object_metadata_csv: str
+                         ) -> List[Dict[str, Any]]:
+  """Extracts image and object metadata dataFrames and merge them."""
+
+  image_metadata_df = prep_image_df(image_csv)
+  object_metadata_df = load_and_validate_one_csv(
+      object_metadata_csv, OBJECT_METADATA_REQUIRED_COLUMNS, 'object_metadata')
+
+  df = pd.merge(
+      image_metadata_df,
+      object_metadata_df,
+      how='inner',
+      on=[
+          config.PLATE,
+          config.WELL,
+          config.SITE,
+      ]).reset_index()
+
+  # validate that all the found centers have images after the inner merge
+  # (it is okay if some images are unused, we do not expect that every site
+  # must have objects)
+  if df.shape[0] != object_metadata_df.shape[0]:
+    raise ValueError('Some of the objects did not have associated images. '
+                     'There were %d objects, now %d object rows after merge.' %
+                     (object_metadata_df.shape[0], df.shape[0]))
+
+  # Modify columns to match expected format.
+  df[config.PLATE] = df[config.PLATE].apply(
+      lambda x: str(x).zfill(5))
+  df[config.SITE] = df[config.SITE].apply(
+      lambda x: str(x).zfill(5))
+
+  if config.BATCH not in df.columns:
+    df[config.BATCH] = df[config.PLATE]
+  if config.PLATE not in df.columns:
+    df[config.PLATE] = df[config.PLATE]
+
+  # group by site and create one record per site with a list of patches
+  records = []
+  groupby_cols = [config.BATCH, config.PLATE, config.PLATE, config.WELL,
+                  config.SITE, config.CHANNEL, config.IMAGE_PATH]
+  for grouped_items, site_df in df.groupby(groupby_cols):
+    one_record = {}
+    for i, groupby_col_name in enumerate(groupby_cols):
+      one_record[groupby_col_name] = grouped_items[i]
+    one_record[config.CENTER_RECORDS] = (
+        site_df[OBJECT_METADATA_REQUIRED_COLUMNS].to_dict('records'))
+    records.append(one_record)
+  return records
 
 
 def load_img(elem: Dict[str, Any], raw_channel_order: List[str],

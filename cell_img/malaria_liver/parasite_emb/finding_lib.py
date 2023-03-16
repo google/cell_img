@@ -20,6 +20,10 @@ OVERLAP_DEFAULT_MIN_SCORE = 0.01
 # typical value.
 OVERLAP_IOU_THRESHOLD = 0.5
 
+# Values used if the object detection or user does not provide them.
+DEFAULT_CONFIDENCE = 1.0
+DEFAULT_OVERLAP = False
+
 # NOTE: critique will complain about collections and tell you to use attrs,
 # but that causes problems with pickle and the beam pipeline fails
 ModelInfo = collections.namedtuple('ModelInfo',
@@ -78,8 +82,8 @@ class BatchCellCenterFinder(beam.DoFn):
         col = cell_center[1]
         if len(cell_center) == 2:
           # Set confidence to 1.0 if not provided.
-          confidence = 1.0
-          overlap = False
+          confidence = DEFAULT_CONFIDENCE
+          overlap = DEFAULT_OVERLAP
         elif len(cell_center) == 4:
           confidence = cell_center[2]
           overlap = cell_center[3]
@@ -126,6 +130,30 @@ def extract_best_centers(results_dict: Dict[str, tf.Tensor],
   return points
 
 
+class BatchCsvCenterFinder(beam.DoFn):
+  """Identifies cell centers in a batch site images."""
+
+  def process_batched_elements(self, elements: List[Dict[str, Any]]):
+    # Make a copy to avoid mutating input to beam transform.
+    example_dicts = copy.deepcopy(elements)
+
+    for example in example_dicts:
+      example_cell_centers_list = []
+      for center_record in example[config.CENTER_RECORDS]:
+        example_cell_centers_list.append(Point(
+            int(center_record[config.CENTER_ROW]),
+            int(center_record[config.CENTER_COL]),
+            DEFAULT_CONFIDENCE, DEFAULT_OVERLAP))
+      beam.metrics.Metrics.counter(_METRICS_NAMESPACE, 'num_cell_centers').inc(
+          len(example_cell_centers_list))
+      yield example, example_cell_centers_list
+
+  def process(self, batched_elements: List[Dict[str, Any]]):
+    """Processes one batched element."""
+    for output in self.process_batched_elements(batched_elements):
+      yield output
+
+
 class MakePatches(beam.PTransform):
   """Picks patches at cell centers."""
 
@@ -162,8 +190,6 @@ class MakePatches(beam.PTransform):
     cell_centers_list = [
         x for x in cell_centers_list if x.confidence > self.min_confidence
     ]
-    logging.info('Dropped from %d to %d cell centers', total_centers,
-                 len(cell_centers_list))
     beam.metrics.Metrics.counter(
         _METRICS_NAMESPACE,
         'num_low_confidence').inc(total_centers - len(cell_centers_list))
@@ -260,8 +286,10 @@ def drop_edges(image_shape: List[int], cell_center: Point,
   if min_row < 0 or max_row > num_rows or min_col < 0 or max_col > num_cols:
     return (None, None)
 
-  return (Point(row=min_row, column=min_col, confidence=1, overlap=False),
-          Point(row=max_row, column=max_col, confidence=1, overlap=False))
+  return (Point(row=min_row, column=min_col,
+                confidence=DEFAULT_CONFIDENCE, overlap=DEFAULT_OVERLAP),
+          Point(row=max_row, column=max_col,
+                confidence=DEFAULT_CONFIDENCE, overlap=DEFAULT_OVERLAP))
 
 
 def _patch_coords_without_boundary_check(center_row, center_col, side_length):
@@ -356,6 +384,24 @@ def _extract_one_patch(
           patch.upper_left.column + patch.lower_right.column) // 2
   patch_element[config.FINDING_CONFIDENCE] = float(patch.confidence)
   patch_element[config.FINDING_OVERLAP] = patch.overlap
+
+  # if we have patches from an outside source, pull in their info
+  if config.CENTER_RECORDS in image_element:
+    this_center = None
+    for center_rec in image_element[config.CENTER_RECORDS]:
+      if (center_rec[config.CENTER_ROW] == patch_element[config.CENTER_ROW] and
+          center_rec[config.CENTER_COL] == patch_element[config.CENTER_COL]):
+        this_center = center_rec
+        break
+    if not this_center:
+      raise ValueError(
+          'Unable to find center at row %d, column %d in %s %s %s' % (
+              patch_element[config.CENTER_ROW],
+              patch_element[config.CENTER_COL],
+              patch_element[config.PLATE_UID],
+              patch_element[config.WELL],
+              patch_element[config.SITE],))
+    patch_element[config.STAGE_RESULT] = this_center[config.STAGE_RESULT]
 
   beam.metrics.Metrics.counter(_METRICS_NAMESPACE, 'num_patch_groups').inc()
   return patch_element
