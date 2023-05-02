@@ -104,6 +104,7 @@ def _yield_view_slice_and_read_image(image_metadata, ts_index, image_path_col):
   try:
     (view_slice, image_array) = ts_write_lib.get_view_slice_and_read_image(
         image_metadata, ts_index, image_path_col)
+    beam.metrics.Metrics.counter(_NAMESPACE, 'read_image').inc()
     yield view_slice, image_array
   except Exception as e:  # pylint: disable=broad-except
     logging.info('Exception in get_view_slice_and_read_image %s', str(e))

@@ -284,6 +284,7 @@ class _ReadThenWriteToDownsampledDoFn(beam.DoFn):
   def process(self, slice_or_int_tuple: Tuple[Union[int, slice], ...]) -> None:
     self._output_store[slice_or_int_tuple] = self._input_store_downsampled[
         slice_or_int_tuple].read().result()
+    beam.metrics.Metrics.counter('ts', 'downsampled_chunk').inc()
 
 
 class _DownsampleOne(beam.PTransform):
