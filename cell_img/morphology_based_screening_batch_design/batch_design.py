@@ -61,7 +61,6 @@ import random
 
 import numpy as np
 import pandas as pd
-from pandas.core.base import DataError
 
 
 def make_96_well_plate(quadrant_swap=False):
@@ -295,8 +294,9 @@ def seed_96_well_plate(cell_line_df,
   # make sure specified columns are all numeric
   for cat in seed_categories:
     if not _qc_column(cell_line_df[cat]):
-      raise DataError(f'''{cat} is not all numeric and cannot be used in
-                         optimized seeding''')
+      raise pd.errors.DataError(
+          f'{cat} is not all numeric and cannot be used in optimized seeding'
+      )
 
   df_variance = []
   dataframes = []
