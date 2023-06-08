@@ -92,7 +92,7 @@ class _Multi1D():
     for name in coordinate_names:
       self._index_lookups[name] = _Single1D(coordinate_arrays[name])
     self._coordinate_names = copy.deepcopy(coordinate_names)
-    self.size = np.product([x.size for x in self._index_lookups.values()],
+    self.size = np.prod([x.size for x in self._index_lookups.values()],
                            dtype=int)
 
   def _get_missing_coords(self, labels):
