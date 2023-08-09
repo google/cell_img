@@ -25,10 +25,10 @@ class BaseCountModel:
 
   plate_effect_unconstrained: jnp.ndarray  # shape (n_plates - 1,)
 
-  well_row_unconstrained: jnp.array
-  well_row_sq_unconstrained: jnp.array
-  well_col_unconstrained: jnp.array
-  well_col_sq_unconstrained: jnp.array
+  well_row_unconstrained: jnp.ndarray
+  well_row_sq_unconstrained: jnp.ndarray
+  well_col_unconstrained: jnp.ndarray
+  well_col_sq_unconstrained: jnp.ndarray
 
   # We're assuming that controls get special handling. In particular, all
   # active control wells are pooled to give a single estimate for active

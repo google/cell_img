@@ -19,8 +19,9 @@ SAMPLE = 'sample'
 
 
 @functools.partial(jax.jit, static_argnames=('shrinkage'))
-def get_regularized_covariance(input_matrix: jnp.array,
-                               shrinkage: Optional[float] = 0) -> jnp.array:
+def get_regularized_covariance(
+    input_matrix: jnp.ndarray, shrinkage: Optional[float] = 0
+) -> jnp.ndarray:
   """Get the regularized covariance for a matrix given the amount of shrinkage.
 
   Args:
@@ -35,8 +36,9 @@ def get_regularized_covariance(input_matrix: jnp.array,
 
 
 @functools.partial(jax.jit, static_argnames=('shrinkage'))
-def shrink_covariance_matrix(input_covariance_matrix: jnp.array,
-                             shrinkage: Optional[float] = 0) -> jnp.array:
+def shrink_covariance_matrix(
+    input_covariance_matrix: jnp.ndarray, shrinkage: Optional[float] = 0
+) -> jnp.ndarray:
   """Shrink a covariance matrix given the amount of shrinkage.
 
   This follows scikit-learn's implementation from
@@ -57,10 +59,12 @@ def shrink_covariance_matrix(input_covariance_matrix: jnp.array,
 
 
 @functools.partial(jax.jit, static_argnames=('scale_to_f', 'shrinkage'))
-def get_hotelling_t2(emb0: jnp.array,
-                     emb1: jnp.array,
-                     scale_to_f: bool,
-                     shrinkage: Optional[float] = 0) -> jnp.array:
+def get_hotelling_t2(
+    emb0: jnp.ndarray,
+    emb1: jnp.ndarray,
+    scale_to_f: bool,
+    shrinkage: Optional[float] = 0,
+) -> jnp.ndarray:
   """Get Hotelling's T-squared statistic for 2 sets of embeddings."""
   n0 = emb0.shape[0]
   mean0 = jnp.mean(emb0, axis=0)
@@ -85,13 +89,15 @@ def get_hotelling_t2(emb0: jnp.array,
 
 
 @functools.partial(jax.jit, static_argnames=('scale_to_f', 'shrinkage'))
-def get_hotelling_t2_wrt_control(n_control_samples: int,
-                                 control_mean: jnp.array,
-                                 control_eigenvalues: jnp.array,
-                                 control_eigenvectors: jnp.array,
-                                 emb1: jnp.array,
-                                 scale_to_f: bool,
-                                 shrinkage: Optional[float] = 0) -> jnp.array:
+def get_hotelling_t2_wrt_control(
+    n_control_samples: int,
+    control_mean: jnp.ndarray,
+    control_eigenvalues: jnp.ndarray,
+    control_eigenvectors: jnp.ndarray,
+    emb1: jnp.ndarray,
+    scale_to_f: bool,
+    shrinkage: Optional[float] = 0,
+) -> jnp.ndarray:
   """Get Hotelling's T-squared statistic, using precomputed control covariance.
 
   Args:

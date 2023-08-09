@@ -28,13 +28,13 @@ MAX_VAR_COEFF = 10.
 @dataclasses.dataclass(frozen=True)
 class InhibitionParams():
   """Parameters for a model of inhibition's affect on appearance and counts."""
-  mean_items_unconstrained: jnp.array  # (n_plates)
-  overdispersion_unconstrained: jnp.array  # (n_plates)
-  inhibition_unconstrained: jnp.array  # (n_treatments-1)
-  mean_offset_unconstrained: jnp.array  # (n_plates,)
-  mean_coeffs_unconstrained: jnp.array  # (n_hep_lots, n_knots)
-  var_offset_unconstrained: jnp.array  # (n_plates,)
-  var_coeffs_unconstrained: jnp.array  # (n_hep_lots, n_knots)
+  mean_items_unconstrained: jnp.ndarray  # (n_plates)
+  overdispersion_unconstrained: jnp.ndarray  # (n_plates)
+  inhibition_unconstrained: jnp.ndarray  # (n_treatments-1)
+  mean_offset_unconstrained: jnp.ndarray  # (n_plates,)
+  mean_coeffs_unconstrained: jnp.ndarray  # (n_hep_lots, n_knots)
+  var_offset_unconstrained: jnp.ndarray  # (n_plates,)
+  var_coeffs_unconstrained: jnp.ndarray  # (n_hep_lots, n_knots)
 
   spline_order_mean: int  # order of spline approximating mean(inhibition)
   knots_mean: List[float]  # knots for spline approximating mean(inhibition)
@@ -179,7 +179,7 @@ def get_log_prob_count(
   treatment_index = jnp.array(df.treatment_index.to_numpy())
   n_items = jnp.array(df[count_column].to_numpy())
 
-  def log_prob_count(params: InhibitionParams) -> jnp.array:
+  def log_prob_count(params: InhibitionParams) -> jnp.ndarray:
     """Get the log probability of a set of counts given a set of parameters.
 
     We assume counts of items (hypnozoites / hepatocytes / etc) have a negative

@@ -41,10 +41,12 @@ def set_knot_multiplicity(
 
 
 @functools.partial(jax.jit, static_argnames=('k', 'knots'))
-def m_spline(x: jnp.array,
-             i: int,  # spline i in the basis
-             k: int,  # spline order k
-             knots: Tuple[float, ...]) -> jnp.array:
+def m_spline(
+    x: jnp.ndarray,
+    i: int,  # spline i in the basis
+    k: int,  # spline order k
+    knots: Tuple[float, ...],
+) -> jnp.ndarray:
   """Evaluate a kth order M-spline.
 
   M-splines:
@@ -104,10 +106,12 @@ def m_spline(x: jnp.array,
 
 
 @functools.partial(jax.jit, static_argnames=['k', 'knots'])
-def i_spline(x: jnp.array,
-             i: int,  # spline i in the basis
-             k: int,  # spline order k
-             knots: Tuple[float, ...]) -> jnp.array:
+def i_spline(
+    x: jnp.ndarray,
+    i: int,  # spline i in the basis
+    k: int,  # spline order k
+    knots: Tuple[float, ...],
+) -> jnp.ndarray:
   """Evaluate a kth order I-spline.
 
   I-splines are the integrals of M-splines. Sums of I-splines with positive
@@ -130,9 +134,9 @@ def i_spline(x: jnp.array,
   j = jnp.digitize(x, knots_array, right=False) - 1
 
   def i_spline_term(
-      total: jnp.array,
+      total: jnp.ndarray,
       m_minus_i: int,
-  ) -> jnp.array:
+  ) -> jnp.ndarray:
     """Single term in the sum used to compute an I-spline."""
     m = m_minus_i + i
     term = jnp.where(
@@ -140,7 +144,7 @@ def i_spline(x: jnp.array,
         0.,
         (knots_array[m+k+1] - knots_array[m]) * m_spline(x, m, k+1, knots) /
         (k + 1))
-    return total + term, term
+    return total + term, term  # pytype: disable=bad-return-type  # jnp-array
 
   return jnp.where(
       i > j,
@@ -158,11 +162,14 @@ def i_spline(x: jnp.array,
 
 @functools.partial(jax.jit, static_argnames=['spline_fn', 'k', 'knots'])
 def _spline_approx(
-    spline_fn: Callable[[jnp.array, int, int, Tuple[float, ...]], jnp.array],
-    x: jnp.array,
+    spline_fn: Callable[
+        [jnp.ndarray, int, int, Tuple[float, ...]], jnp.ndarray
+    ],
+    x: jnp.ndarray,
     k: int,
     knots: Tuple[float, ...],
-    coeffs: jnp.array) -> jnp.array:
+    coeffs: jnp.ndarray,
+) -> jnp.ndarray:
   """Compute a weighted sum of splines.
 
   Args:
@@ -189,10 +196,8 @@ def _spline_approx(
 
 
 def m_spline_approx(
-    x: jnp.array,
-    k: int,
-    knots: Tuple[float, ...],
-    coeffs: jnp.array) -> jnp.array:
+    x: jnp.ndarray, k: int, knots: Tuple[float, ...], coeffs: jnp.ndarray
+) -> jnp.ndarray:
   """Compute a weighted sum of M-splines.
 
   Args:
@@ -213,10 +218,8 @@ def m_spline_approx(
 
 
 def i_spline_approx(
-    x: jnp.array,
-    k: int,
-    knots: Tuple[float, ...],
-    coeffs: jnp.array) -> jnp.array:
+    x: jnp.ndarray, k: int, knots: Tuple[float, ...], coeffs: jnp.ndarray
+) -> jnp.ndarray:
   """Compute a weighted sum of I-splines.
 
   Args:
