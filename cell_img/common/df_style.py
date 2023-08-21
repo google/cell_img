@@ -267,4 +267,4 @@ def border_data(df):
   down = _border_columns(df.T).T
   left = no_border
 
-  return bs + ' ' + top + ' ' + right + ' ' + down + ' ' + left + ';'  # pytype: disable=unsupported-operands  # typed-pandas
+  return bs + ' ' + top + ' ' + right + ' ' + down + ' ' + left + ';'
