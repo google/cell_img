@@ -91,7 +91,7 @@ def export_annotations(
         enum_property = enum_properties[prop_name]
         labels = []
         values = []
-        for label, value in enum_property.iteritems():
+        for label, value in enum_property.items():
           labels.append(label)
           values.append(value)
         prop = neuroglancer.AnnotationPropertySpec(
