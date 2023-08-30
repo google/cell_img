@@ -33,7 +33,7 @@ def _downcast_ints(series):
   # Neuroglancer annotation values should be encoded little endian.
   for dtype in ['<i4']:
     series_downcast = series.astype(dtype)
-    if (series == series_downcast).all():  # pytype: disable=attribute-error  # typed-pandas
+    if (series == series_downcast).all():
       return series_downcast
   raise ValueError('Could not downcast %s' %
                    str(series.loc[series != series_downcast].head()))
@@ -187,7 +187,8 @@ def _get_available_coords(
 
 
 def _get_available_block_sizes_dict(
-    df: pd.DataFrame, ts_index: ts_index_lib.TensorstoreIndex) -> pd.DataFrame:
+    df: pd.DataFrame, ts_index: ts_index_lib.TensorstoreIndex
+) -> collections.OrderedDict:
   """Gets available block sizes for the rows of the dataframe.
 
   A block size is unavailable if any of the needed tensorstore index labels are
@@ -221,7 +222,7 @@ def _get_available_block_sizes_dict(
     raise ValueError(
         'Could not get any block sizes. Missing labels: %s' %
         str(missing_keys))
-  return block_size_dict  # pytype: disable=bad-return-type  # typed-pandas
+  return block_size_dict
 
 
 def _shift_image_coords(df: pd.DataFrame, image_origin_coords_df: pd.DataFrame,
@@ -265,7 +266,7 @@ def _shift_image_coords(df: pd.DataFrame, image_origin_coords_df: pd.DataFrame,
 def _is_patch_df(df: pd.DataFrame) -> bool:
   """Returns True if the dataframe has patches. False for whole image."""
   df = df.reset_index()  # Move batch plate etc. to columns.
-  if ('center_row' in df.columns) and ('center_col' in df.columns):  # pytype: disable=attribute-error  # typed-pandas
+  if ('center_row' in df.columns) and ('center_col' in df.columns):
     centers_df = df[['center_row', 'center_col']]
     if not (centers_df == 0).all().all():
       return True
