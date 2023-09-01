@@ -260,7 +260,7 @@ def mapped_df_to_idot_csv(
                        for k, df in target_plate_df.groupby(SOURCE_PLATE)}
   already_primed_src_names = set()
   prime_plate_index = 1
-  for (src_name, target_name), df in target_plate_df.groupby([SOURCE_PLATE,
+  for (src_name, target_name), df in target_plate_df.groupby([SOURCE_PLATE,  # pytype: disable=attribute-error  # pandas-drop-duplicates-overloads
                                                               TARGET_PLATE]):
     if not df.empty:
       if src_name not in already_primed_src_names:

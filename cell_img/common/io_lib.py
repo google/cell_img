@@ -21,7 +21,7 @@ def read_csv(filename: str, **kwargs) -> pd.DataFrame:
 
 def write_csv(df: pd.DataFrame, output_path: str, **kwargs) -> None:
   with _open(output_path, 'wt') as f:
-    df.to_csv(f, **kwargs)
+    df.to_csv(f, **kwargs)  # pytype: disable=wrong-arg-types  # pandas-drop-duplicates-overloads
 
 
 def read_image(filename: str) -> np.ndarray:
