@@ -123,7 +123,7 @@ class TensorstoreBeamTest(absltest.TestCase):
         _ = p_slice_and_array | beam.Map(do_assert)
 
   def testScheduleAfterShutdown(self):
-    with tempfile.TemporaryDirectory() as dir_path:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as dir_path:
       ts_spec = valid_tensorstore_spec(dir_path)
 
       # The location and data to be written in beam.
