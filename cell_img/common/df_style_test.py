@@ -91,7 +91,7 @@ class DfStyleBorderTest(absltest.TestCase):
                            self.pipe_stack.xs(1, level='col0').bottom)
 
   def testColumnBorders(self):
-    first_row_borders = self.pipe_stack.xs([0, 0, 0],
+    first_row_borders = self.pipe_stack.xs((0, 0, 0),
                                            level=['row0', 'row1', 'row2']).right
     product_boundaries = np.array(list(reversed(self.column_sizes))).cumprod()
 
@@ -128,7 +128,7 @@ class DfStyleBorderTest(absltest.TestCase):
 
   def testRowBorders(self):
     first_col_borders = self.pipe_stack.xs(
-        [0, 0, 0, 0], level=['col0', 'col1', 'col2', 'col3']).bottom
+        (0, 0, 0, 0), level=['col0', 'col1', 'col2', 'col3']).bottom
     product_boundaries = np.array(list(reversed(self.index_sizes))).cumprod()
 
     # See comment in testColumnBorders.  We use a similar strategy here.
