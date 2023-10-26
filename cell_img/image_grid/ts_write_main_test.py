@@ -281,5 +281,4 @@ def read_s0_metadata(tensorstore_root_path):
 
 
 if __name__ == '__main__':
-  FLAGS.eventmanager_default_stack_size = 512 * 1024
   absltest.main()
