@@ -3,6 +3,7 @@ from absl.testing import absltest
 from cell_img.predict_inhibition import spline
 import jax
 import jax.numpy as jnp
+import jax.scipy as jsp
 import numpy.testing
 
 
@@ -42,7 +43,7 @@ class SplineTest(absltest.TestCase):
       knots = spline.set_knot_multiplicity(k, self.knots_mult_1)
       for i in range(spline.n_basis_fns(k=k, knots=knots)):
         y = spline.m_spline(x, i, k, knots)
-        integral = jnp.trapz(y, x)
+        integral = jsp.integrate.trapezoid(y, x)
         self.assertAlmostEqual(integral, 1., delta=0.01)
 
   def test_m_spline_fails_with_nonincreasing_knots(self):
@@ -61,7 +62,7 @@ class SplineTest(absltest.TestCase):
         i_spline_values = spline.i_spline(endpoints, i, k, knots)
         for endpoint, value in zip(endpoints, i_spline_values):
           # integrate corresponding m_spline from 0 to endpoint
-          integral = jnp.trapz(y[x <= endpoint], x[x <= endpoint])
+          integral = jsp.integrate.trapezoid(y[x <= endpoint], x[x <= endpoint])
           self.assertAlmostEqual(integral, value, delta=0.01)
 
   def test_i_spline_fails_with_nonincreasing_knots(self):
