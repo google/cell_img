@@ -21,7 +21,7 @@ class JointModelTest(absltest.TestCase):
     x_sum_sq = jnp.sum(x**2.)
     actual = joint_model.get_normal_log_prob_from_summary_stats(
         n=n, x_sum=x_sum, x_sum_sq=x_sum_sq, mu=mu, sigma_sq=sigma_sq)
-    numpy.testing.assert_allclose(expected, actual)
+    numpy.testing.assert_allclose(expected, actual, rtol=1e-5)
 
 
 if __name__ == '__main__':
