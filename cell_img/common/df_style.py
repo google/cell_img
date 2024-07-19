@@ -201,7 +201,7 @@ def discrete_colorize_core(style):
 def get_marker_and_color_dicts(series, palette='Dark2'):
   counts = series.value_counts(dropna=False)
   num_items = len(counts)
-  markers = matplotlib.markers.MarkerStyle().filled_markers[:num_items]
+  markers = matplotlib.markers.MarkerStyle('').filled_markers[:num_items]
   colors = sns.color_palette(palette, num_items)
   keys = list(counts.index)
   marker_dict = dict(zip(keys, markers))
